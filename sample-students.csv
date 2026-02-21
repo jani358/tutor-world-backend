@@ -1,0 +1,5 @@
+email,firstName,lastName,grade,password
+john.doe@example.com,John,Doe,Grade 5,Student123
+jane.smith@example.com,Jane,Smith,Grade 6,Student456
+mike.wilson@example.com,Mike,Wilson,Grade 5,Student789
+sarah.johnson@example.com,Sarah,Johnson,Grade 7,Student101
