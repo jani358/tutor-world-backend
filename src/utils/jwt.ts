@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 
 export interface TokenPayload {
   userId: string;
@@ -6,38 +6,38 @@ export interface TokenPayload {
   role: string;
 }
 
-export const generateAccessToken = (payload: TokenPayload): string => {
-  const secret = process.env.JWT_SECRET || "your-secret-key";
-  const expiresIn = process.env.JWT_EXPIRE || "24h";
+const ALGORITHM = "HS512";
 
-  return jwt.sign(payload, secret, { expiresIn });
+export const generateAccessToken = (payload: TokenPayload): string => {
+  const secret = process.env.JWT_SECRET!;
+  const expiresIn = (process.env.JWT_EXPIRE || "24h") as SignOptions["expiresIn"];
+
+  return jwt.sign(payload, secret, { expiresIn, algorithm: ALGORITHM });
 };
 
 export const generateRefreshToken = (payload: TokenPayload): string => {
-  const secret = process.env.JWT_REFRESH_SECRET || "your-refresh-secret-key";
-  const expiresIn = process.env.JWT_REFRESH_EXPIRE || "7d";
+  const secret = process.env.JWT_REFRESH_SECRET!;
+  const expiresIn = (process.env.JWT_REFRESH_EXPIRE || "7d") as SignOptions["expiresIn"];
 
-  return jwt.sign(payload, secret, { expiresIn });
+  return jwt.sign(payload, secret, { expiresIn, algorithm: ALGORITHM });
 };
 
 export const verifyAccessToken = (token: string): TokenPayload => {
-  const secret = process.env.JWT_SECRET || "your-secret-key";
+  const secret = process.env.JWT_SECRET!;
 
   try {
-    const decoded = jwt.verify(token, secret) as TokenPayload;
-    return decoded;
-  } catch (error) {
+    return jwt.verify(token, secret, { algorithms: [ALGORITHM] }) as TokenPayload;
+  } catch {
     throw new Error("Invalid or expired token");
   }
 };
 
 export const verifyRefreshToken = (token: string): TokenPayload => {
-  const secret = process.env.JWT_REFRESH_SECRET || "your-refresh-secret-key";
+  const secret = process.env.JWT_REFRESH_SECRET!;
 
   try {
-    const decoded = jwt.verify(token, secret) as TokenPayload;
-    return decoded;
-  } catch (error) {
+    return jwt.verify(token, secret, { algorithms: [ALGORITHM] }) as TokenPayload;
+  } catch {
     throw new Error("Invalid or expired refresh token");
   }
 };
@@ -47,9 +47,10 @@ export const generateVerificationCode = (): string => {
 };
 
 export const generateResetToken = (): string => {
+  const secret = process.env.JWT_SECRET!;
   return jwt.sign(
     { random: Math.random() },
-    process.env.JWT_SECRET || "your-secret-key",
-    { expiresIn: "1h" }
+    secret,
+    { expiresIn: "1h", algorithm: ALGORITHM }
   );
 };

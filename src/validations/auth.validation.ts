@@ -19,6 +19,11 @@ export const registerSchema = Joi.object({
     "string.max": "Last name must not exceed 50 characters",
     "any.required": "Last name is required",
   }),
+  username: Joi.string().alphanum().min(3).max(30).lowercase().optional().messages({
+    "string.alphanum": "Username may only contain letters and numbers",
+    "string.min": "Username must be at least 3 characters",
+    "string.max": "Username must not exceed 30 characters",
+  }),
   grade: Joi.string().optional(),
   school: Joi.string().optional(),
   dateOfBirth: Joi.date().optional(),
@@ -60,4 +65,10 @@ export const resetPasswordSchema = Joi.object({
 
 export const refreshTokenSchema = Joi.object({
   refreshToken: Joi.string().required(),
+});
+
+export const googleCallbackSchema = Joi.object({
+  idToken: Joi.string().required().messages({
+    "any.required": "Google id_token is required",
+  }),
 });

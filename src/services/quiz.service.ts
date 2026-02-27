@@ -1,11 +1,9 @@
 import { v4 as uuidv4 } from "uuid";
-import Quiz, { IQuiz, QuizStatus } from "../models/Quiz.schema";
-import Question from "../models/Question.schema";
+import Quiz, { QuizStatus } from "../models/Quiz.schema";
 import QuizAttempt, { AttemptStatus } from "../models/QuizAttempt.schema";
 import User from "../models/User.schema";
 import { AppError } from "../middlewares/errorHandler";
 import mongoose from "mongoose";
-import { sendQuizAssignmentEmail } from "../utils/email";
 
 /**
  * Get all quizzes assigned to a student (US-007)

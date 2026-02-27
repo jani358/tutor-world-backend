@@ -83,6 +83,17 @@ router.post(
 );
 
 /**
+ * @route   POST /api/auth/google/callback
+ * @desc    Exchange Google id_token (from NextAuth) for app-issued JWT tokens
+ * @access  Public
+ */
+router.post(
+  "/google/callback",
+  validate(authValidation.googleCallbackSchema),
+  authController.googleCallback
+);
+
+/**
  * @route   POST /api/auth/logout
  * @desc    Logout user (US-003)
  * @access  Public

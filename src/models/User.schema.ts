@@ -2,12 +2,14 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export enum UserRole {
   STUDENT = "student",
+  TEACHER = "teacher",
   ADMIN = "admin",
 }
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   userId: string;
+  username: string;
   email: string;
   password: string;
   firstName: string;
@@ -22,6 +24,8 @@ export interface IUser extends Document {
   grade?: string;
   school?: string;
   dateOfBirth?: Date;
+  googleId?: string;
+  avatar?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,6 +38,14 @@ const userSchema = new Schema<IUser>(
       unique: true,
       index: true,
     },
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true,
+    },
     email: {
       type: String,
       required: true,
@@ -44,7 +56,7 @@ const userSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      required: true,
+      required: false,
       select: false,
     },
     firstName: {
@@ -97,15 +109,22 @@ const userSchema = new Schema<IUser>(
     dateOfBirth: {
       type: Date,
     },
+    googleId: {
+      type: String,
+      sparse: true,
+      index: true,
+    },
+    avatar: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Indexes for performance
-userSchema.index({ email: 1 });
-userSchema.index({ userId: 1 });
+// Compound and additional indexes (field-level index: true handles the unique ones above)
 userSchema.index({ role: 1 });
 
 export default mongoose.model<IUser>("User", userSchema);

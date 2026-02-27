@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import Question, { IQuestion } from "../models/Question.schema";
-import Quiz, { IQuiz, QuizStatus } from "../models/Quiz.schema";
+import Quiz, { IQuiz } from "../models/Quiz.schema";
 import User, { UserRole } from "../models/User.schema";
 import QuizAttempt from "../models/QuizAttempt.schema";
 import { AppError } from "../middlewares/errorHandler";
@@ -362,7 +362,6 @@ export const toggleStudentStatus = async (
  */
 export const importStudentsFromCSV = async (csvBuffer: Buffer) => {
   const students: any[] = [];
-  const errors: any[] = [];
 
   return new Promise((resolve, reject) => {
     const stream = Readable.from(csvBuffer.toString());

@@ -3,7 +3,7 @@ import * as authService from "../services/auth.service";
 import { asyncHandler } from "../middlewares/errorHandler";
 
 /**
- * Register new user (US-021)
+ * Register new student user (US-021)
  */
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const result = await authService.registerUser(req.body);
@@ -35,7 +35,33 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
- * Verify email (US-022)
+ * Google OAuth sign-in / registration.
+ * Accepts a Google id_token from the NextAuth callback and returns app-issued JWT tokens.
+ * @route POST /api/auth/google/callback
+ */
+export const googleCallback = asyncHandler(async (req: Request, res: Response) => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    res.status(400).json({ status: "error", message: "idToken is required" });
+    return;
+  }
+
+  const result = await authService.googleSignIn(idToken);
+
+  res.status(200).json({
+    status: "success",
+    message: "Google sign-in successful",
+    data: {
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    },
+  });
+});
+
+/**
+ * Verify email with 6-digit code (US-022)
  */
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   const { email, code } = req.body;
@@ -49,7 +75,7 @@ export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
- * Resend verification code
+ * Resend email verification code
  */
 export const resendVerification = asyncHandler(
   async (req: Request, res: Response) => {
@@ -65,7 +91,7 @@ export const resendVerification = asyncHandler(
 );
 
 /**
- * Forgot password
+ * Forgot password — sends reset link to email
  */
 export const forgotPassword = asyncHandler(
   async (req: Request, res: Response) => {
@@ -81,7 +107,7 @@ export const forgotPassword = asyncHandler(
 );
 
 /**
- * Reset password
+ * Reset password with token
  */
 export const resetPassword = asyncHandler(
   async (req: Request, res: Response) => {
@@ -97,18 +123,20 @@ export const resetPassword = asyncHandler(
 );
 
 /**
- * Refresh token
+ * Refresh access token using valid refresh token.
+ * Returns new access + rotated refresh token.
  */
 export const refreshToken = asyncHandler(
   async (req: Request, res: Response) => {
-    const { refreshToken } = req.body;
+    const { refreshToken: token } = req.body;
 
-    const result = await authService.refreshAccessToken(refreshToken);
+    const result = await authService.refreshAccessToken(token);
 
     res.status(200).json({
       status: "success",
       data: {
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
       },
     });
   }
@@ -116,11 +144,9 @@ export const refreshToken = asyncHandler(
 
 /**
  * Logout user (US-003)
+ * JWT invalidation is client-side; this endpoint confirms the action.
  */
-export const logout = asyncHandler(async (req: Request, res: Response) => {
-  // For JWT, logout is handled on the client side by removing the token
-  // Here we can add token to a blacklist if needed
-
+export const logout = asyncHandler(async (_req: Request, res: Response) => {
   res.status(200).json({
     status: "success",
     message: "Logout successful",

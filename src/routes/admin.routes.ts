@@ -2,6 +2,8 @@ import { Router } from "express";
 import multer from "multer";
 import * as adminController from "../controllers/admin.controller";
 import { authenticate, isAdmin } from "../middlewares/auth.middleware";
+import { validate } from "../middlewares/validation.middleware";
+import * as adminValidation from "../validations/admin.validation";
 
 const router = Router();
 
@@ -17,13 +19,13 @@ router.use(isAdmin);
  */
 
 // Create question (US-016)
-router.post("/questions", adminController.createQuestion);
+router.post("/questions", validate(adminValidation.createQuestionSchema), adminController.createQuestion);
 
 // Get all questions
 router.get("/questions", adminController.getQuestions);
 
 // Update question (US-017)
-router.put("/questions/:questionId", adminController.updateQuestion);
+router.put("/questions/:questionId", validate(adminValidation.updateQuestionSchema), adminController.updateQuestion);
 
 // Delete question
 router.delete("/questions/:questionId", adminController.deleteQuestion);
@@ -33,16 +35,16 @@ router.delete("/questions/:questionId", adminController.deleteQuestion);
  */
 
 // Create quiz
-router.post("/quizzes", adminController.createQuiz);
+router.post("/quizzes", validate(adminValidation.createQuizSchema), adminController.createQuiz);
 
 // Get all quizzes
 router.get("/quizzes", adminController.getQuizzes);
 
 // Update quiz
-router.put("/quizzes/:quizId", adminController.updateQuiz);
+router.put("/quizzes/:quizId", validate(adminValidation.updateQuizSchema), adminController.updateQuiz);
 
 // Assign quiz to students (US-020)
-router.post("/quizzes/:quizId/assign", adminController.assignQuiz);
+router.post("/quizzes/:quizId/assign", validate(adminValidation.assignQuizSchema), adminController.assignQuiz);
 
 // Get quiz results (US-019)
 router.get("/quizzes/:quizId/results", adminController.getQuizResults);

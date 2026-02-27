@@ -66,6 +66,33 @@ export const isAdmin = (
 };
 
 /**
+ * Middleware to check if user is a teacher
+ */
+export const isTeacher = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({
+      status: "error",
+      message: "Authentication required",
+    });
+    return;
+  }
+
+  if (req.user.role !== UserRole.TEACHER) {
+    res.status(403).json({
+      status: "error",
+      message: "Teacher access required",
+    });
+    return;
+  }
+
+  next();
+};
+
+/**
  * Middleware to check if user is a student
  */
 export const isStudent = (
@@ -85,6 +112,36 @@ export const isStudent = (
     res.status(403).json({
       status: "error",
       message: "Student access required",
+    });
+    return;
+  }
+
+  next();
+};
+
+/**
+ * Middleware that allows admin OR teacher (shared access)
+ */
+export const isAdminOrTeacher = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({
+      status: "error",
+      message: "Authentication required",
+    });
+    return;
+  }
+
+  if (
+    req.user.role !== UserRole.ADMIN &&
+    req.user.role !== UserRole.TEACHER
+  ) {
+    res.status(403).json({
+      status: "error",
+      message: "Admin or teacher access required",
     });
     return;
   }

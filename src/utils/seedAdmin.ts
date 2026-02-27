@@ -24,6 +24,7 @@ export const createAdminUser = async (): Promise<void> => {
 
     await User.create({
       userId: uuidv4(),
+      username: "admin",
       email: adminEmail,
       password: hashedPassword,
       firstName: "Admin",

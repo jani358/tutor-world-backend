@@ -2,7 +2,7 @@ import express, { Application } from "express";
 import cors from "cors";
 import morgan from "morgan";
 import "dotenv/config";
-import { connectDB } from "./config/database";
+import "./connectMongoose";
 import { corsOptions } from "./config/cors";
 import { setupRoutes } from "./routes";
 import { errorHandler } from "./middlewares/errorHandler";
@@ -19,7 +19,7 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cors(corsOptions));
 
 // Health check endpoint
-app.get("/health", (req, res) => {
+app.get("/health", (_req, res) => {
   res.status(200).json({
     status: "success",
     message: "Tutor World Backend is running",
@@ -35,19 +35,14 @@ app.use(errorHandler);
 
 // Start server
 app.listen(port, async () => {
-  logger.info(`🚀 Server is running on port ${port}`);
+  logger.info(`🚀 Server running on port ${port}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
 
-  // Connect to database
+  // Create default admin user (runs after MongoDB connects)
   try {
-    await connectDB();
-    logger.info("✅ Database connected successfully");
-
-    // Create default admin user
     await createAdminUser();
   } catch (error) {
-    logger.error("❌ Failed to connect to database:", error);
-    process.exit(1);
+    logger.error("❌ Failed to seed admin user:", error);
   }
 });
 

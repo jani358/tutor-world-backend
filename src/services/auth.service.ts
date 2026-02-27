@@ -12,13 +12,14 @@ import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/email";
 import { AppError } from "../middlewares/errorHandler";
 
 /**
- * Register a new user (US-021)
+ * Register a new student user (US-021)
  */
 export const registerUser = async (data: {
   email: string;
   password: string;
   firstName: string;
   lastName: string;
+  username?: string;
   grade?: string;
   school?: string;
   dateOfBirth?: string;
@@ -26,22 +27,28 @@ export const registerUser = async (data: {
   user: Partial<IUser>;
   message: string;
 }> => {
-  // Check if user already exists
-  const existingUser = await User.findOne({ email: data.email });
-  if (existingUser) {
+  const existingEmail = await User.findOne({ email: data.email });
+  if (existingEmail) {
     throw new AppError("User with this email already exists", 400);
   }
 
-  // Hash password
-  const hashedPassword = await bcrypt.hash(data.password, 12);
+  // Derive username from provided value or email prefix
+  const rawUsername = data.username || data.email.split("@")[0];
+  const baseUsername = rawUsername.toLowerCase().replace(/[^a-z0-9_]/g, "");
 
-  // Generate verification code
+  let username = baseUsername;
+  const collision = await User.findOne({ username });
+  if (collision) {
+    username = `${baseUsername}_${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  const hashedPassword = await bcrypt.hash(data.password, 12);
   const verificationCode = generateVerificationCode();
   const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-  // Create user
   const user = await User.create({
     userId: uuidv4(),
+    username,
     email: data.email,
     password: hashedPassword,
     firstName: data.firstName,
@@ -55,23 +62,23 @@ export const registerUser = async (data: {
     isEmailVerified: false,
   });
 
-  // Send verification email (US-022)
   await sendVerificationEmail(user.email, user.firstName, verificationCode);
 
   return {
     user: {
       userId: user.userId,
+      username: user.username,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
     },
-    message: "Registration successful. Please check your email for verification code.",
+    message: "Registration successful. Please check your email for your verification code.",
   };
 };
 
 /**
- * Login user (US-001, US-002)
+ * Login user with email and password (US-001, US-002)
  */
 export const loginUser = async (
   email: string,
@@ -81,29 +88,24 @@ export const loginUser = async (
   accessToken: string;
   refreshToken: string;
 }> => {
-  // Find user
   const user = await User.findOne({ email }).select("+password");
   if (!user) {
     throw new AppError("Invalid email or password", 401);
   }
 
-  // Check if user is active (US-027)
   if (!user.isActive) {
     throw new AppError("Your account has been deactivated. Please contact administrator.", 403);
   }
 
-  // Check password
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) {
     throw new AppError("Invalid email or password", 401);
   }
 
-  // Check if email is verified
   if (!user.isEmailVerified) {
-    throw new AppError("Please verify your email before logging in", 403);
+    throw new AppError("Please verify your email before logging in.", 403);
   }
 
-  // Generate tokens
   const tokenPayload = {
     userId: user.userId,
     email: user.email,
@@ -116,6 +118,7 @@ export const loginUser = async (
   return {
     user: {
       userId: user.userId,
+      username: user.username,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -129,7 +132,102 @@ export const loginUser = async (
 };
 
 /**
- * Verify email with code (US-022)
+ * Sign in or register via Google OAuth.
+ * Called by the /auth/google/callback endpoint after NextAuth verifies the id_token.
+ */
+export const googleSignIn = async (idToken: string): Promise<{
+  user: Partial<IUser>;
+  accessToken: string;
+  refreshToken: string;
+}> => {
+  const parts = idToken.split(".");
+  if (parts.length < 2) throw new AppError("Invalid Google token", 400);
+
+  let googlePayload: {
+    sub: string;
+    email: string;
+    given_name?: string;
+    family_name?: string;
+    name?: string;
+    picture?: string;
+  };
+
+  try {
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    googlePayload = JSON.parse(Buffer.from(padded, "base64").toString("utf8"));
+  } catch {
+    throw new AppError("Failed to decode Google token", 400);
+  }
+
+  const { sub: googleId, email, given_name, family_name, name, picture } = googlePayload;
+
+  if (!email) throw new AppError("Google account has no email address", 400);
+
+  let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
+  if (!user) {
+    const firstName = given_name || (name ? name.split(" ")[0] : "User");
+    const lastName = family_name || (name ? name.split(" ").slice(1).join(" ") : "");
+
+    const baseUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "");
+    let username = baseUsername;
+    const collision = await User.findOne({ username });
+    if (collision) {
+      username = `${baseUsername}_${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+
+    user = await User.create({
+      userId: uuidv4(),
+      username,
+      email,
+      password: await bcrypt.hash(uuidv4(), 12), // placeholder — Google users sign in via OAuth
+      firstName,
+      lastName,
+      role: UserRole.STUDENT,
+      googleId,
+      avatar: picture,
+      isEmailVerified: true,
+      isActive: true,
+    });
+  } else {
+    if (!user.googleId) {
+      user.googleId = googleId;
+      if (picture && !user.avatar) user.avatar = picture;
+      await user.save();
+    }
+
+    if (!user.isActive) {
+      throw new AppError("Your account has been deactivated. Please contact administrator.", 403);
+    }
+  }
+
+  const tokenPayload = {
+    userId: user.userId,
+    email: user.email,
+    role: user.role,
+  };
+
+  const accessToken = generateAccessToken(tokenPayload);
+  const refreshToken = generateRefreshToken(tokenPayload);
+
+  return {
+    user: {
+      userId: user.userId,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      avatar: user.avatar,
+    },
+    accessToken,
+    refreshToken,
+  };
+};
+
+/**
+ * Verify email with 6-digit code (US-022)
  */
 export const verifyEmail = async (
   email: string,
@@ -159,17 +257,16 @@ export const verifyEmail = async (
     throw new AppError("Verification code has expired", 400);
   }
 
-  // Update user
   user.isEmailVerified = true;
   user.verificationCode = undefined;
   user.verificationCodeExpiry = undefined;
   await user.save();
 
-  return { message: "Email verified successfully" };
+  return { message: "Email verified successfully. You can now log in." };
 };
 
 /**
- * Resend verification code
+ * Resend email verification code
  */
 export const resendVerificationCode = async (
   email: string
@@ -184,7 +281,6 @@ export const resendVerificationCode = async (
     throw new AppError("Email is already verified", 400);
   }
 
-  // Generate new code
   const verificationCode = generateVerificationCode();
   const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
@@ -192,26 +288,24 @@ export const resendVerificationCode = async (
   user.verificationCodeExpiry = verificationCodeExpiry;
   await user.save();
 
-  // Send email
   await sendVerificationEmail(user.email, user.firstName, verificationCode);
 
   return { message: "Verification code sent successfully" };
 };
 
 /**
- * Forgot password - send reset link
+ * Request password reset — sends reset link to email
  */
 export const forgotPassword = async (
   email: string
 ): Promise<{ message: string }> => {
   const user = await User.findOne({ email });
 
+  // Do not reveal whether email exists
   if (!user) {
-    // Don't reveal if user exists
-    return { message: "If the email exists, a reset link has been sent" };
+    return { message: "If that email is registered, a password reset link has been sent." };
   }
 
-  // Generate reset token
   const resetToken = generateResetToken();
   const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
@@ -219,14 +313,13 @@ export const forgotPassword = async (
   user.resetPasswordExpiry = resetTokenExpiry;
   await user.save();
 
-  // Send email
   await sendPasswordResetEmail(user.email, user.firstName, resetToken);
 
-  return { message: "If the email exists, a reset link has been sent" };
+  return { message: "If that email is registered, a password reset link has been sent." };
 };
 
 /**
- * Reset password with token
+ * Reset password using reset token
  */
 export const resetPassword = async (
   token: string,
@@ -241,40 +334,41 @@ export const resetPassword = async (
     throw new AppError("Invalid or expired reset token", 400);
   }
 
-  // Hash new password
-  const hashedPassword = await bcrypt.hash(newPassword, 12);
-
-  user.password = hashedPassword;
+  user.password = await bcrypt.hash(newPassword, 12);
   user.resetPasswordToken = undefined;
   user.resetPasswordExpiry = undefined;
   await user.save();
 
-  return { message: "Password reset successfully" };
+  return { message: "Password reset successfully. You can now log in." };
 };
 
 /**
- * Refresh access token
+ * Refresh access token using valid refresh token.
+ * Returns a new access token and a rotated refresh token.
  */
 export const refreshAccessToken = async (
   refreshToken: string
-): Promise<{ accessToken: string }> => {
+): Promise<{ accessToken: string; refreshToken: string }> => {
+  let decoded;
   try {
-    const decoded = verifyRefreshToken(refreshToken);
-
-    // Verify user still exists and is active
-    const user = await User.findOne({ userId: decoded.userId, isActive: true });
-    if (!user) {
-      throw new AppError("User not found or inactive", 401);
-    }
-
-    const newAccessToken = generateAccessToken({
-      userId: user.userId,
-      email: user.email,
-      role: user.role,
-    });
-
-    return { accessToken: newAccessToken };
-  } catch (error) {
+    decoded = verifyRefreshToken(refreshToken);
+  } catch {
     throw new AppError("Invalid refresh token", 401);
   }
+
+  const user = await User.findOne({ userId: decoded.userId, isActive: true });
+  if (!user) {
+    throw new AppError("User not found or account inactive", 401);
+  }
+
+  const tokenPayload = {
+    userId: user.userId,
+    email: user.email,
+    role: user.role,
+  };
+
+  const newAccessToken = generateAccessToken(tokenPayload);
+  const newRefreshToken = generateRefreshToken(tokenPayload);
+
+  return { accessToken: newAccessToken, refreshToken: newRefreshToken };
 };
