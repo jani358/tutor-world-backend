@@ -155,6 +155,39 @@ export const createTeacher = asyncHandler(
 );
 
 /**
+ * Get current user's profile
+ */
+export const getProfile = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).user?.userId;
+
+    const user = await authService.getProfile(userId);
+
+    res.status(200).json({
+      status: "success",
+      data: user,
+    });
+  }
+);
+
+/**
+ * Update current user's profile
+ */
+export const updateProfile = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).user?.userId;
+
+    const result = await authService.updateProfile(userId, req.body);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+      data: result.user,
+    });
+  }
+);
+
+/**
  * Refresh access token using valid refresh token.
  * Returns new access + rotated refresh token.
  */

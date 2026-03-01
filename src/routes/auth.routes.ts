@@ -126,6 +126,25 @@ router.post(
 );
 
 /**
+ * @route   GET /api/auth/me
+ * @desc    Get current user profile
+ * @access  Private
+ */
+router.get("/me", authenticate, authController.getProfile);
+
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update current user profile
+ * @access  Private
+ */
+router.put(
+  "/profile",
+  authenticate,
+  validate(authValidation.updateProfileSchema),
+  authController.updateProfile
+);
+
+/**
  * @route   POST /api/auth/change-password
  * @desc    Change password for authenticated user
  * @access  Private

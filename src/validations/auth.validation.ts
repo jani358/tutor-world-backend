@@ -102,6 +102,20 @@ export const createTeacherSchema = Joi.object({
   username: Joi.string().alphanum().min(3).max(30).lowercase().optional(),
 });
 
+export const updateProfileSchema = Joi.object({
+  firstName: Joi.string().min(2).max(50).optional().messages({
+    "string.min": "First name must be at least 2 characters",
+    "string.max": "First name must not exceed 50 characters",
+  }),
+  lastName: Joi.string().min(2).max(50).optional().messages({
+    "string.min": "Last name must be at least 2 characters",
+    "string.max": "Last name must not exceed 50 characters",
+  }),
+  email: Joi.string().email().optional().messages({
+    "string.email": "Please provide a valid email address",
+  }),
+});
+
 export const refreshTokenSchema = Joi.object({
   refreshToken: Joi.string().required(),
 });

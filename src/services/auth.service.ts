@@ -426,6 +426,94 @@ export const createTeacher = async (data: {
 };
 
 /**
+ * Get current user profile
+ */
+export const getProfile = async (
+  userId: string
+): Promise<Partial<IUser>> => {
+  const user = await User.findOne({ userId, isActive: true });
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  return {
+    userId: user.userId,
+    username: user.username,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    avatar: user.avatar,
+    grade: user.grade,
+    school: user.school,
+    dateOfBirth: user.dateOfBirth,
+    createdAt: user.createdAt,
+  };
+};
+
+/**
+ * Update current user's profile (firstName, lastName, email)
+ */
+export const updateProfile = async (
+  userId: string,
+  data: { firstName?: string; lastName?: string; email?: string }
+): Promise<{ user: Partial<IUser>; message: string }> => {
+  const user = await User.findOne({ userId, isActive: true });
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const changes: Array<{ field: string; oldValue?: string; newValue?: string }> = [];
+
+  if (data.firstName && data.firstName !== user.firstName) {
+    changes.push({ field: "firstName", oldValue: user.firstName, newValue: data.firstName });
+    user.firstName = data.firstName;
+  }
+  if (data.lastName && data.lastName !== user.lastName) {
+    changes.push({ field: "lastName", oldValue: user.lastName, newValue: data.lastName });
+    user.lastName = data.lastName;
+  }
+  if (data.email && data.email !== user.email) {
+    const existing = await User.findOne({ email: data.email });
+    if (existing) {
+      throw new AppError("Email is already in use by another account", 400);
+    }
+    changes.push({ field: "email", oldValue: user.email, newValue: data.email });
+    user.email = data.email;
+  }
+
+  if (changes.length === 0) {
+    return {
+      user: {
+        userId: user.userId,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        avatar: user.avatar,
+      },
+      message: "No changes detected.",
+    };
+  }
+
+  await user.save();
+
+  return {
+    user: {
+      userId: user.userId,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      avatar: user.avatar,
+    },
+    message: "Profile updated successfully.",
+  };
+};
+
+/**
  * Refresh access token using valid refresh token.
  * Returns a new access token and a rotated refresh token.
  */
