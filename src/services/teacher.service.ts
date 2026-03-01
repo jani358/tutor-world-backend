@@ -4,9 +4,6 @@ import QuizAttempt from "../models/QuizAttempt.schema";
 import User from "../models/User.schema";
 import { AppError } from "../middlewares/errorHandler";
 
-/**
- * Get teacher dashboard stats
- */
 export const getDashboardStats = async (userId: string) => {
   const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
   if (!teacher) throw new AppError("Teacher not found", 404);
@@ -16,7 +13,6 @@ export const getDashboardStats = async (userId: string) => {
     Quiz.countDocuments({ createdBy: teacher._id, isDeleted: { $ne: true } }),
   ]);
 
-  // Get students assigned to teacher's quizzes
   const teacherQuizzes = await Quiz.find({
     createdBy: teacher._id,
     isDeleted: { $ne: true },
@@ -33,7 +29,6 @@ export const getDashboardStats = async (userId: string) => {
     isDeleted: { $ne: true },
   });
 
-  // Get quiz IDs
   const quizIds = teacherQuizzes.map((q) => q._id);
 
   const totalSubmissions = await QuizAttempt.countDocuments({
@@ -55,9 +50,6 @@ export const getDashboardStats = async (userId: string) => {
   };
 };
 
-/**
- * Get questions created by teacher
- */
 export const getTeacherQuestions = async (
   userId: string,
   filters: {
@@ -95,9 +87,6 @@ export const getTeacherQuestions = async (
   };
 };
 
-/**
- * Get students assigned to teacher's quizzes
- */
 export const getTeacherStudents = async (
   userId: string,
   filters: { isActive?: boolean; page?: number; limit?: number }
@@ -139,9 +128,6 @@ export const getTeacherStudents = async (
   };
 };
 
-/**
- * Get quiz results for teacher's quizzes
- */
 export const getTeacherResults = async (
   userId: string,
   filters: { page?: number; limit?: number }
@@ -180,9 +166,6 @@ export const getTeacherResults = async (
   };
 };
 
-/**
- * Get quizzes created by teacher
- */
 export const getTeacherQuizzes = async (
   userId: string,
   filters: { status?: string; page?: number; limit?: number }

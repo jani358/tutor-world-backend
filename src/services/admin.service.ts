@@ -8,8 +8,6 @@ import { sendQuizAssignmentEmail } from "../utils/email";
 import csv from "csv-parser";
 import { Readable } from "stream";
 
-// ─── Question Management ───
-
 export const createQuestion = async (
   questionData: Partial<IQuestion>,
   userId: string
@@ -34,7 +32,6 @@ export const updateQuestion = async (
   const question = await Question.findOne({ questionId });
   if (!question) throw new AppError("Question not found", 404);
 
-  // Ownership check — admin can update any, teacher can only update own
   const user = await User.findOne({ userId, isDeleted: { $ne: true } });
   if (!user) throw new AppError("User not found", 404);
 
@@ -55,7 +52,6 @@ export const deleteQuestion = async (questionId: string, userId: string) => {
   const question = await Question.findOne({ questionId });
   if (!question) throw new AppError("Question not found", 404);
 
-  // Ownership check
   const user = await User.findOne({ userId, isDeleted: { $ne: true } });
   if (!user) throw new AppError("User not found", 404);
 
@@ -66,7 +62,6 @@ export const deleteQuestion = async (questionId: string, userId: string) => {
     throw new AppError("You can only delete questions you created", 403);
   }
 
-  // Check if question is used in any quiz
   const quizUsingQuestion = await Quiz.findOne({
     questions: question._id,
     isDeleted: { $ne: true },
@@ -132,8 +127,6 @@ export const getQuestions = async (filters: {
     },
   };
 };
-
-// ─── Quiz Management ───
 
 export const createQuiz = async (
   quizData: Partial<IQuiz>,
@@ -203,7 +196,6 @@ export const deleteQuiz = async (quizId: string, userId: string) => {
     throw new AppError("You can only delete quizzes you created", 403);
   }
 
-  // Dependency check — soft delete if attempts exist
   const attemptCount = await QuizAttempt.countDocuments({ quizId: quiz._id });
   if (attemptCount > 0) {
     quiz.isDeleted = true;
@@ -320,8 +312,6 @@ export const getQuizResults = async (quizId: string) => {
   };
 };
 
-// ─── Student Management ───
-
 export const getStudents = async (filters: {
   isActive?: boolean;
   grade?: string;
@@ -398,8 +388,6 @@ export const deleteStudent = async (userId: string) => {
 
   return { message: "Student account deleted successfully" };
 };
-
-// ─── Teacher Management ───
 
 export const getTeachers = async (filters: {
   isActive?: boolean;
@@ -503,8 +491,6 @@ export const deleteTeacher = async (userId: string) => {
   return { message: "Teacher account deleted successfully" };
 };
 
-// ─── Dashboard Stats ───
-
 export const getDashboardStats = async () => {
   const [
     totalStudents,
@@ -554,8 +540,6 @@ export const getDashboardStats = async () => {
     newUsersThisMonth,
   };
 };
-
-// ─── CSV Import ───
 
 export const importStudentsFromCSV = async (csvBuffer: Buffer) => {
   const students: any[] = [];

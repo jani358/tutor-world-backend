@@ -4,8 +4,6 @@ import * as adminService from "../services/admin.service";
 import { asyncHandler } from "../middlewares/errorHandler";
 import { getAuditLogs as fetchAuditLogs } from "../utils/auditLogger";
 
-// ─── Question Management ───
-
 export const createQuestion = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const question = await adminService.createQuestion(
@@ -73,8 +71,6 @@ export const getQuestions = asyncHandler(
     });
   }
 );
-
-// ─── Quiz Management ───
 
 export const createQuiz = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -164,8 +160,6 @@ export const getQuizResults = asyncHandler(
   }
 );
 
-// ─── Student Management ───
-
 export const getStudents = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const filters = {
@@ -235,8 +229,6 @@ export const importStudents = asyncHandler(
   }
 );
 
-// ─── Teacher Management ───
-
 export const getTeachers = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const filters = {
@@ -285,8 +277,6 @@ export const deleteTeacher = asyncHandler(
   }
 );
 
-// ─── Dashboard Stats ───
-
 export const getDashboardStats = asyncHandler(
   async (_req: AuthRequest, res: Response) => {
     const stats = await adminService.getDashboardStats();
@@ -297,8 +287,6 @@ export const getDashboardStats = asyncHandler(
     });
   }
 );
-
-// ─── Audit Logs ───
 
 export const getAuditLogs = asyncHandler(
   async (req: AuthRequest, res: Response) => {

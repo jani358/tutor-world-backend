@@ -28,7 +28,6 @@ export const logAudit = async (params: AuditLogParams): Promise<void> => {
       metadata: params.metadata,
     });
   } catch (error) {
-    // Never throw from audit logging — log and continue
     logger.error("Failed to write audit log:", error);
   }
 };

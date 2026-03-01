@@ -16,18 +16,15 @@ import { createAdminUser } from "./utils/seedAdmin";
 const app: Application = express();
 const port = process.env.PORT || 5001;
 
-// Security middleware
 app.use(helmet());
 app.use(mongoSanitize());
 app.use(hpp());
 
-// General middleware
 app.use(morgan("dev"));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(cors(corsOptions));
 
-// Health check endpoint
 app.get("/health", (_req, res) => {
   res.status(200).json({
     status: "success",
@@ -36,13 +33,10 @@ app.get("/health", (_req, res) => {
   });
 });
 
-// Setup routes
 setupRoutes(app);
 
-// Error handler (must be last)
 app.use(errorHandler);
 
-// Start server
 const server = app.listen(port, async () => {
   logger.info(`🚀 Server running on port ${port}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
@@ -54,7 +48,6 @@ const server = app.listen(port, async () => {
   }
 });
 
-// Graceful shutdown
 const gracefulShutdown = (signal: string) => {
   logger.info(`${signal} received. Shutting down gracefully...`);
   server.close(async () => {
@@ -68,7 +61,6 @@ const gracefulShutdown = (signal: string) => {
     process.exit(0);
   });
 
-  // Force shutdown after 10 seconds
   setTimeout(() => {
     logger.error("Forced shutdown after timeout.");
     process.exit(1);

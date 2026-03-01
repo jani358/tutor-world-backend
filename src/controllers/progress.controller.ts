@@ -3,9 +3,6 @@ import { AuthRequest } from "../middlewares/auth.middleware";
 import * as progressService from "../services/progress.service";
 import { asyncHandler } from "../middlewares/errorHandler";
 
-/**
- * Get student progress overview (US-009, US-013)
- */
 export const getProgress = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const progress = await progressService.getStudentProgress(
@@ -19,9 +16,6 @@ export const getProgress = asyncHandler(
   }
 );
 
-/**
- * Get detailed statistics (US-014)
- */
 export const getStatistics = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const stats = await progressService.getDetailedStatistics(
@@ -35,9 +29,6 @@ export const getStatistics = asyncHandler(
   }
 );
 
-/**
- * Get progress chart data (US-013, US-015)
- */
 export const getChart = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const filters: any = {};

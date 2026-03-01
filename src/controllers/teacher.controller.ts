@@ -4,8 +4,6 @@ import * as teacherService from "../services/teacher.service";
 import * as adminService from "../services/admin.service";
 import { asyncHandler } from "../middlewares/errorHandler";
 
-// ─── Dashboard ───
-
 export const getDashboardStats = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const stats = await teacherService.getDashboardStats(req.user!.userId);
@@ -16,8 +14,6 @@ export const getDashboardStats = asyncHandler(
     });
   }
 );
-
-// ─── Questions (uses admin service with ownership) ───
 
 export const getQuestions = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -88,8 +84,6 @@ export const deleteQuestion = asyncHandler(
     });
   }
 );
-
-// ─── Quizzes ───
 
 export const getQuizzes = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -180,8 +174,6 @@ export const getQuizResults = asyncHandler(
   }
 );
 
-// ─── Students ───
-
 export const getStudents = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const filters = {
@@ -205,8 +197,6 @@ export const getStudents = asyncHandler(
     });
   }
 );
-
-// ─── Results ───
 
 export const getResults = asyncHandler(
   async (req: AuthRequest, res: Response) => {

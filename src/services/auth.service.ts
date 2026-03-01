@@ -10,9 +10,6 @@ import {
 import { sendVerificationEmail, sendPasswordResetEmail, sendTeacherInviteEmail } from "../utils/email";
 import { AppError } from "../middlewares/errorHandler";
 
-/**
- * Register a new student user (US-021)
- */
 export const registerUser = async (data: {
   email: string;
   password: string;
@@ -31,7 +28,6 @@ export const registerUser = async (data: {
     throw new AppError("User with this email already exists", 400);
   }
 
-  // Derive username from provided value or email prefix
   const rawUsername = data.username || data.email.split("@")[0];
   const baseUsername = rawUsername.toLowerCase().replace(/[^a-z0-9_]/g, "");
 
@@ -43,7 +39,7 @@ export const registerUser = async (data: {
 
   const hashedPassword = await bcrypt.hash(data.password, 12);
   const verificationCode = generateVerificationCode();
-  const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   const user = await User.create({
     userId: uuidv4(),
@@ -76,9 +72,6 @@ export const registerUser = async (data: {
   };
 };
 
-/**
- * Login user with email and password (US-001, US-002)
- */
 export const loginUser = async (
   email: string,
   password: string
@@ -130,10 +123,6 @@ export const loginUser = async (
   };
 };
 
-/**
- * Sign in or register via Google OAuth.
- * Called by the /auth/google/callback endpoint after NextAuth verifies the id_token.
- */
 export const googleSignIn = async (idToken: string): Promise<{
   user: Partial<IUser>;
   accessToken: string;
@@ -180,7 +169,7 @@ export const googleSignIn = async (idToken: string): Promise<{
       userId: uuidv4(),
       username,
       email,
-      password: await bcrypt.hash(uuidv4(), 12), // placeholder — Google users sign in via OAuth
+      password: await bcrypt.hash(uuidv4(), 12),
       firstName,
       lastName,
       role: UserRole.STUDENT,
@@ -225,9 +214,6 @@ export const googleSignIn = async (idToken: string): Promise<{
   };
 };
 
-/**
- * Verify email with 6-digit code (US-022)
- */
 export const verifyEmail = async (
   email: string,
   code: string
@@ -264,9 +250,6 @@ export const verifyEmail = async (
   return { message: "Email verified successfully. You can now log in." };
 };
 
-/**
- * Resend email verification code
- */
 export const resendVerificationCode = async (
   email: string
 ): Promise<{ message: string }> => {
@@ -292,21 +275,17 @@ export const resendVerificationCode = async (
   return { message: "Verification code sent successfully" };
 };
 
-/**
- * Request password reset — sends 6-digit OTP to email
- */
 export const forgotPassword = async (
   email: string
 ): Promise<{ message: string }> => {
   const user = await User.findOne({ email });
 
-  // Do not reveal whether email exists
   if (!user) {
     return { message: "If that email is registered, a reset code has been sent." };
   }
 
   const resetCode = generateVerificationCode();
-  const resetExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  const resetExpiry = new Date(Date.now() + 15 * 60 * 1000);
 
   user.resetPasswordToken = resetCode;
   user.resetPasswordExpiry = resetExpiry;
@@ -317,9 +296,6 @@ export const forgotPassword = async (
   return { message: "If that email is registered, a reset code has been sent." };
 };
 
-/**
- * Reset password using 6-digit OTP code
- */
 export const resetPassword = async (
   email: string,
   code: string,
@@ -343,9 +319,6 @@ export const resetPassword = async (
   return { message: "Password reset successfully. You can now log in." };
 };
 
-/**
- * Change password for an authenticated user
- */
 export const changePassword = async (
   userId: string,
   currentPassword: string,
@@ -372,9 +345,6 @@ export const changePassword = async (
   return { message: "Password changed successfully." };
 };
 
-/**
- * Create a teacher account (admin only)
- */
 export const createTeacher = async (data: {
   email: string;
   firstName: string;
@@ -394,7 +364,6 @@ export const createTeacher = async (data: {
     username = `${baseUsername}_${Math.floor(1000 + Math.random() * 9000)}`;
   }
 
-  // Generate a temporary password
   const tempPassword = `Tutor@${Math.floor(100000 + Math.random() * 900000)}`;
   const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
@@ -425,9 +394,6 @@ export const createTeacher = async (data: {
   };
 };
 
-/**
- * Get current user profile
- */
 export const getProfile = async (
   userId: string
 ): Promise<Partial<IUser>> => {
@@ -451,9 +417,6 @@ export const getProfile = async (
   };
 };
 
-/**
- * Update current user's profile (firstName, lastName, email)
- */
 export const updateProfile = async (
   userId: string,
   data: { firstName?: string; lastName?: string; email?: string }
@@ -513,10 +476,6 @@ export const updateProfile = async (
   };
 };
 
-/**
- * Refresh access token using valid refresh token.
- * Returns a new access token and a rotated refresh token.
- */
 export const refreshAccessToken = async (
   refreshToken: string
 ): Promise<{ accessToken: string; refreshToken: string }> => {

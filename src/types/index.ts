@@ -1,9 +1,6 @@
 import { Request } from "express";
 import { Document, Types } from "mongoose";
 
-/**
- * Authenticated request with user payload
- */
 export interface AuthenticatedRequest extends Request {
   user?: {
     userId: string;
@@ -12,9 +9,6 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-/**
- * Standard API response shape
- */
 export interface ApiResponse<T = unknown> {
   status: "success" | "error";
   message?: string;
@@ -22,9 +16,6 @@ export interface ApiResponse<T = unknown> {
   pagination?: PaginationMeta;
 }
 
-/**
- * Pagination metadata
- */
 export interface PaginationMeta {
   total: number;
   page: number;
@@ -32,26 +23,17 @@ export interface PaginationMeta {
   totalPages: number;
 }
 
-/**
- * Paginated query parameters
- */
 export interface PaginationQuery {
   page?: number;
   limit?: number;
 }
 
-/**
- * Quiz answer submitted by student
- */
 export interface SubmittedAnswer {
   questionId: string;
   selectedAnswer: string | string[];
   timeSpent?: number;
 }
 
-/**
- * Question filter parameters for admin
- */
 export interface QuestionFilters {
   subject?: string;
   grade?: string;
@@ -61,9 +43,6 @@ export interface QuestionFilters {
   limit: number;
 }
 
-/**
- * Generic MongoDB document with id field
- */
 export type MongoDocument<T> = T &
   Document & {
     _id: Types.ObjectId;

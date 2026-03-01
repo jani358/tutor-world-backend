@@ -1,7 +1,6 @@
 import nodemailer from "nodemailer";
 import { logger } from "./logger";
 
-// ─── Config ──────────────────────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || "smtp.gmail.com",
   port: parseInt(process.env.EMAIL_PORT || "587"),
@@ -19,7 +18,6 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const BRAND_COLOR = "#667eea";
 const YEAR = new Date().getFullYear();
 
-// ─── Shared HTML builder ──────────────────────────────────────────────────────
 function buildEmail({
   firstName,
   title,
@@ -195,31 +193,24 @@ function buildEmail({
     <div class="email-container">
       <div class="content-wrapper">
 
-        <!-- Logo -->
         <div class="logo">
           <span class="logo-text">${COMPANY_NAME}</span>
         </div>
 
-        <!-- Greeting -->
         <h1 class="greeting">Hi ${firstName},</h1>
 
-        <!-- Description -->
         <p class="description">${description}</p>
 
-        <!-- Code / Credentials section -->
         ${codeSection}
 
-        <!-- CTA Button -->
         ${ctaSection}
 
-        <!-- Security note -->
         ${warningText ? `<p class="security-note">${warningText}</p>` : ""}
 
-        <!-- Footer -->
         <div class="footer">
           <p>${footerNote}</p>
           <p>Support: <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a></p>
-          <p class="footer-copy">© ${YEAR} ${COMPANY_NAME}. All rights reserved.</p>
+          <p class="footer-copy">&copy; ${YEAR} ${COMPANY_NAME}. All rights reserved.</p>
         </div>
 
       </div>
@@ -229,11 +220,6 @@ function buildEmail({
 </html>`;
 }
 
-// ─── Email functions ──────────────────────────────────────────────────────────
-
-/**
- * Send email verification code (US-022)
- */
 export const sendVerificationEmail = async (
   email: string,
   firstName: string,
@@ -264,9 +250,6 @@ export const sendVerificationEmail = async (
   }
 };
 
-/**
- * Send password reset OTP email
- */
 export const sendPasswordResetEmail = async (
   email: string,
   firstName: string,
@@ -298,9 +281,6 @@ export const sendPasswordResetEmail = async (
   }
 };
 
-/**
- * Send teacher account invite email (admin-created)
- */
 export const sendTeacherInviteEmail = async (
   email: string,
   firstName: string,
@@ -345,9 +325,6 @@ export const sendTeacherInviteEmail = async (
   }
 };
 
-/**
- * Send quiz assignment notification
- */
 export const sendQuizAssignmentEmail = async (
   email: string,
   firstName: string,

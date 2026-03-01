@@ -129,7 +129,6 @@ const userSchema = new Schema<IUser>(
   }
 );
 
-// Compound and additional indexes (field-level index: true handles the unique ones above)
 userSchema.index({ role: 1 });
 
 export default mongoose.model<IUser>("User", userSchema);

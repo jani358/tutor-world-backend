@@ -1,7 +1,3 @@
-/**
- * Application-wide constants
- */
-
 export const GRADES = ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"] as const;
 
 export const SUBJECTS = [
@@ -26,7 +22,7 @@ export const TOKEN_EXPIRY = {
   ACCESS: process.env.JWT_EXPIRE || "24h",
   REFRESH: process.env.JWT_REFRESH_EXPIRE || "7d",
   RESET_PASSWORD: "1h",
-  VERIFICATION_CODE: 24 * 60 * 60 * 1000, // 24 hours in ms
+  VERIFICATION_CODE: 24 * 60 * 60 * 1000,
 } as const;
 
 export const PASSWORD_SALT_ROUNDS = 12;

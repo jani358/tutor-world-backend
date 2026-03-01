@@ -1,6 +1,5 @@
 import Joi from "joi";
 
-// Password must contain: 1 uppercase, 1 lowercase, 1 number, 1 special character, min 8 chars
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`]).{8,}$/;
 const PASSWORD_MESSAGE =
   "Password must be at least 8 characters with 1 uppercase, 1 lowercase, 1 number, and 1 special character";

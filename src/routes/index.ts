@@ -14,7 +14,6 @@ export const setupRoutes = (app: Application): void => {
   app.use(`${API_PREFIX}/admin`, adminRoutes);
   app.use(`${API_PREFIX}/teacher`, teacherRoutes);
 
-  // 404 handler
   app.use("*", (req, res) => {
     res.status(404).json({
       status: "error",

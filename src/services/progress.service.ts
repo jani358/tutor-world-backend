@@ -2,9 +2,6 @@ import QuizAttempt, { AttemptStatus } from "../models/QuizAttempt.schema";
 import User from "../models/User.schema";
 import { AppError } from "../middlewares/errorHandler";
 
-/**
- * Get student progress overview (US-009, US-013)
- */
 export const getStudentProgress = async (userId: string) => {
   const user = await User.findOne({ userId });
   if (!user) {
@@ -16,7 +13,6 @@ export const getStudentProgress = async (userId: string) => {
     status: AttemptStatus.COMPLETED,
   }).populate("quizId", "title subject grade");
 
-  // Total stats
   const totalQuizzes = attempts.length;
   const totalScore = attempts.reduce((sum, a) => sum + a.score, 0);
   const averageScore =
@@ -26,7 +22,6 @@ export const getStudentProgress = async (userId: string) => {
   const passRate =
     totalQuizzes > 0 ? ((passedQuizzes / totalQuizzes) * 100).toFixed(2) : 0;
 
-  // Subject-wise breakdown
   const subjectStats: any = {};
   attempts.forEach((attempt: any) => {
     const subject = attempt.quizId.subject;
@@ -63,9 +58,6 @@ export const getStudentProgress = async (userId: string) => {
   };
 };
 
-/**
- * Get detailed quiz statistics (US-014)
- */
 export const getDetailedStatistics = async (userId: string) => {
   const user = await User.findOne({ userId });
   if (!user) {
@@ -79,7 +71,6 @@ export const getDetailedStatistics = async (userId: string) => {
     .populate("quizId", "title subject grade difficulty")
     .sort({ completedAt: -1 });
 
-  // Calculate strengths and weaknesses based on difficulty
   const difficultyStats: any = {
     easy: { total: 0, passed: 0, averageScore: 0 },
     medium: { total: 0, passed: 0, averageScore: 0 },
@@ -87,7 +78,6 @@ export const getDetailedStatistics = async (userId: string) => {
   };
 
   attempts.forEach((attempt: any) => {
-    // Determine difficulty based on score or quiz difficulty if available
     let difficulty = "medium";
     if (attempt.percentage >= 80) difficulty = "easy";
     else if (attempt.percentage < 60) difficulty = "hard";
@@ -97,7 +87,6 @@ export const getDetailedStatistics = async (userId: string) => {
     if (attempt.isPassed) difficultyStats[difficulty].passed++;
   });
 
-  // Calculate averages
   Object.keys(difficultyStats).forEach((key) => {
     const stat = difficultyStats[key];
     if (stat.total > 0) {
@@ -112,9 +101,6 @@ export const getDetailedStatistics = async (userId: string) => {
   };
 };
 
-/**
- * Get progress chart data (US-013, US-015)
- */
 export const getProgressChart = async (
   userId: string,
   filters?: {
@@ -133,7 +119,6 @@ export const getProgressChart = async (
     status: AttemptStatus.COMPLETED,
   };
 
-  // Apply filters (US-015)
   if (filters?.startDate || filters?.endDate) {
     query.completedAt = {};
     if (filters.startDate) query.completedAt.$gte = filters.startDate;
@@ -144,7 +129,6 @@ export const getProgressChart = async (
     .populate("quizId", "title subject grade")
     .sort({ completedAt: 1 });
 
-  // Filter by subject if provided
   let filteredAttempts = attempts;
   if (filters?.subject) {
     filteredAttempts = attempts.filter(
@@ -152,7 +136,6 @@ export const getProgressChart = async (
     );
   }
 
-  // Format data for chart
   const chartData = filteredAttempts.map((attempt) => ({
     date: attempt.completedAt,
     score: attempt.score,
@@ -162,7 +145,6 @@ export const getProgressChart = async (
     isPassed: attempt.isPassed,
   }));
 
-  // Calculate trend
   let trend = "stable";
   if (chartData.length >= 5) {
     const recentAvg =
