@@ -21,6 +21,8 @@ export interface IUser extends Document {
   resetPasswordToken?: string;
   resetPasswordExpiry?: Date;
   isActive: boolean;
+  isDeleted: boolean;
+  deletedAt?: Date;
   grade?: string;
   school?: string;
   dateOfBirth?: Date;
@@ -94,6 +96,13 @@ const userSchema = new Schema<IUser>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
     },
     grade: {
       type: String,

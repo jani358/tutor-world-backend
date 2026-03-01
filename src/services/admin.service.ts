@@ -8,37 +8,41 @@ import { sendQuizAssignmentEmail } from "../utils/email";
 import csv from "csv-parser";
 import { Readable } from "stream";
 
-/**
- * Create a new question (US-016)
- */
+// ─── Question Management ───
+
 export const createQuestion = async (
   questionData: Partial<IQuestion>,
-  adminId: string
+  userId: string
 ) => {
-  const admin = await User.findOne({ userId: adminId });
-  if (!admin) {
-    throw new AppError("Admin not found", 404);
-  }
+  const user = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!user) throw new AppError("User not found", 404);
 
   const question = await Question.create({
     ...questionData,
     questionId: uuidv4(),
-    createdBy: admin._id,
+    createdBy: user._id,
   });
 
   return question;
 };
 
-/**
- * Update a question (US-017)
- */
 export const updateQuestion = async (
   questionId: string,
-  updates: Partial<IQuestion>
+  updates: Partial<IQuestion>,
+  userId: string
 ) => {
   const question = await Question.findOne({ questionId });
-  if (!question) {
-    throw new AppError("Question not found", 404);
+  if (!question) throw new AppError("Question not found", 404);
+
+  // Ownership check — admin can update any, teacher can only update own
+  const user = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!user) throw new AppError("User not found", 404);
+
+  if (
+    user.role === UserRole.TEACHER &&
+    question.createdBy.toString() !== user._id.toString()
+  ) {
+    throw new AppError("You can only update questions you created", 403);
   }
 
   Object.assign(question, updates);
@@ -47,22 +51,28 @@ export const updateQuestion = async (
   return question;
 };
 
-/**
- * Delete a question
- */
-export const deleteQuestion = async (questionId: string) => {
+export const deleteQuestion = async (questionId: string, userId: string) => {
   const question = await Question.findOne({ questionId });
-  if (!question) {
-    throw new AppError("Question not found", 404);
+  if (!question) throw new AppError("Question not found", 404);
+
+  // Ownership check
+  const user = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!user) throw new AppError("User not found", 404);
+
+  if (
+    user.role === UserRole.TEACHER &&
+    question.createdBy.toString() !== user._id.toString()
+  ) {
+    throw new AppError("You can only delete questions you created", 403);
   }
 
   // Check if question is used in any quiz
   const quizUsingQuestion = await Quiz.findOne({
     questions: question._id,
+    isDeleted: { $ne: true },
   });
 
   if (quizUsingQuestion) {
-    // Soft delete - mark as inactive
     question.isActive = false;
     await question.save();
     return {
@@ -75,9 +85,6 @@ export const deleteQuestion = async (questionId: string) => {
   return { message: "Question deleted successfully" };
 };
 
-/**
- * Get all questions with filters
- */
 export const getQuestions = async (filters: {
   subject?: string;
   grade?: string;
@@ -85,6 +92,7 @@ export const getQuestions = async (filters: {
   isActive?: boolean;
   page?: number;
   limit?: number;
+  createdBy?: string;
 }) => {
   const {
     subject,
@@ -93,6 +101,7 @@ export const getQuestions = async (filters: {
     isActive = true,
     page = 1,
     limit = 20,
+    createdBy,
   } = filters;
 
   const query: any = { isActive };
@@ -100,6 +109,7 @@ export const getQuestions = async (filters: {
   if (subject) query.subject = subject;
   if (grade) query.grade = grade;
   if (difficulty) query.difficulty = difficulty;
+  if (createdBy) query.createdBy = createdBy;
 
   const skip = (page - 1) * limit;
 
@@ -123,19 +133,15 @@ export const getQuestions = async (filters: {
   };
 };
 
-/**
- * Create a new quiz
- */
+// ─── Quiz Management ───
+
 export const createQuiz = async (
   quizData: Partial<IQuiz>,
-  adminId: string
+  userId: string
 ) => {
-  const admin = await User.findOne({ userId: adminId });
-  if (!admin) {
-    throw new AppError("Admin not found", 404);
-  }
+  const user = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!user) throw new AppError("User not found", 404);
 
-  // Calculate total points from questions
   const questions = await Question.find({
     _id: { $in: quizData.questions },
   });
@@ -146,25 +152,30 @@ export const createQuiz = async (
     ...quizData,
     quizId: uuidv4(),
     totalPoints,
-    createdBy: admin._id,
+    createdBy: user._id,
   });
 
   return quiz;
 };
 
-/**
- * Update a quiz
- */
 export const updateQuiz = async (
   quizId: string,
-  updates: Partial<IQuiz>
+  updates: Partial<IQuiz>,
+  userId: string
 ) => {
-  const quiz = await Quiz.findOne({ quizId });
-  if (!quiz) {
-    throw new AppError("Quiz not found", 404);
+  const quiz = await Quiz.findOne({ quizId, isDeleted: { $ne: true } });
+  if (!quiz) throw new AppError("Quiz not found", 404);
+
+  const user = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!user) throw new AppError("User not found", 404);
+
+  if (
+    user.role === UserRole.TEACHER &&
+    quiz.createdBy.toString() !== user._id.toString()
+  ) {
+    throw new AppError("You can only update quizzes you created", 403);
   }
 
-  // Recalculate total points if questions changed
   if (updates.questions) {
     const questions = await Question.find({
       _id: { $in: updates.questions },
@@ -178,28 +189,51 @@ export const updateQuiz = async (
   return quiz;
 };
 
-/**
- * Assign quiz to students (US-020)
- */
+export const deleteQuiz = async (quizId: string, userId: string) => {
+  const quiz = await Quiz.findOne({ quizId, isDeleted: { $ne: true } });
+  if (!quiz) throw new AppError("Quiz not found", 404);
+
+  const user = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!user) throw new AppError("User not found", 404);
+
+  if (
+    user.role === UserRole.TEACHER &&
+    quiz.createdBy.toString() !== user._id.toString()
+  ) {
+    throw new AppError("You can only delete quizzes you created", 403);
+  }
+
+  // Dependency check — soft delete if attempts exist
+  const attemptCount = await QuizAttempt.countDocuments({ quizId: quiz._id });
+  if (attemptCount > 0) {
+    quiz.isDeleted = true;
+    quiz.status = "archived" as any;
+    await quiz.save();
+    return {
+      message:
+        "Quiz has student submissions and has been archived instead of deleted",
+    };
+  }
+
+  await Quiz.deleteOne({ quizId });
+  return { message: "Quiz deleted successfully" };
+};
+
 export const assignQuiz = async (
   quizId: string,
   studentIds: string[]
 ) => {
-  const quiz = await Quiz.findOne({ quizId });
-  if (!quiz) {
-    throw new AppError("Quiz not found", 404);
-  }
+  const quiz = await Quiz.findOne({ quizId, isDeleted: { $ne: true } });
+  if (!quiz) throw new AppError("Quiz not found", 404);
 
   const students = await User.find({
     userId: { $in: studentIds },
     role: UserRole.STUDENT,
+    isDeleted: { $ne: true },
   });
 
-  if (students.length === 0) {
-    throw new AppError("No valid students found", 404);
-  }
+  if (students.length === 0) throw new AppError("No valid students found", 404);
 
-  // Add students to assignedTo array (avoid duplicates)
   const currentAssignedIds = quiz.assignedTo.map((id) => id.toString());
   const newStudentIds = students
     .map((s) => s._id)
@@ -208,7 +242,6 @@ export const assignQuiz = async (
   quiz.assignedTo.push(...newStudentIds);
   await quiz.save();
 
-  // Send notification emails
   for (const student of students) {
     if (newStudentIds.some((id) => id.toString() === student._id.toString())) {
       await sendQuizAssignmentEmail(
@@ -225,23 +258,22 @@ export const assignQuiz = async (
   };
 };
 
-/**
- * Get all quizzes with filters
- */
 export const getQuizzes = async (filters: {
   status?: string;
   subject?: string;
   grade?: string;
   page?: number;
   limit?: number;
+  createdBy?: string;
 }) => {
-  const { status, subject, grade, page = 1, limit = 20 } = filters;
+  const { status, subject, grade, page = 1, limit = 20, createdBy } = filters;
 
-  const query: any = {};
+  const query: any = { isDeleted: { $ne: true } };
 
   if (status) query.status = status;
   if (subject) query.subject = subject;
   if (grade) query.grade = grade;
+  if (createdBy) query.createdBy = createdBy;
 
   const skip = (page - 1) * limit;
 
@@ -266,14 +298,9 @@ export const getQuizzes = async (filters: {
   };
 };
 
-/**
- * Get quiz results for all students (US-019)
- */
 export const getQuizResults = async (quizId: string) => {
-  const quiz = await Quiz.findOne({ quizId });
-  if (!quiz) {
-    throw new AppError("Quiz not found", 404);
-  }
+  const quiz = await Quiz.findOne({ quizId, isDeleted: { $ne: true } });
+  if (!quiz) throw new AppError("Quiz not found", 404);
 
   const results = await QuizAttempt.find({
     quizId: quiz._id,
@@ -293,19 +320,19 @@ export const getQuizResults = async (quizId: string) => {
   };
 };
 
-/**
- * Get all students
- */
+// ─── Student Management ───
+
 export const getStudents = async (filters: {
   isActive?: boolean;
   grade?: string;
   page?: number;
   limit?: number;
 }) => {
-  const { isActive = true, grade, page = 1, limit = 20 } = filters;
+  const { isActive, grade, page = 1, limit = 20 } = filters;
 
-  const query: any = { role: UserRole.STUDENT, isActive };
+  const query: any = { role: UserRole.STUDENT, isDeleted: { $ne: true } };
 
+  if (typeof isActive === "boolean") query.isActive = isActive;
   if (grade) query.grade = grade;
 
   const skip = (page - 1) * limit;
@@ -330,17 +357,16 @@ export const getStudents = async (filters: {
   };
 };
 
-/**
- * Deactivate/Reactivate student account (US-027)
- */
 export const toggleStudentStatus = async (
   userId: string,
   isActive: boolean
 ) => {
-  const student = await User.findOne({ userId, role: UserRole.STUDENT });
-  if (!student) {
-    throw new AppError("Student not found", 404);
-  }
+  const student = await User.findOne({
+    userId,
+    role: UserRole.STUDENT,
+    isDeleted: { $ne: true },
+  });
+  if (!student) throw new AppError("Student not found", 404);
 
   student.isActive = isActive;
   await student.save();
@@ -357,9 +383,180 @@ export const toggleStudentStatus = async (
   };
 };
 
-/**
- * Import students from CSV (US-028)
- */
+export const deleteStudent = async (userId: string) => {
+  const student = await User.findOne({
+    userId,
+    role: UserRole.STUDENT,
+    isDeleted: { $ne: true },
+  });
+  if (!student) throw new AppError("Student not found", 404);
+
+  student.isDeleted = true;
+  student.isActive = false;
+  student.deletedAt = new Date();
+  await student.save();
+
+  return { message: "Student account deleted successfully" };
+};
+
+// ─── Teacher Management ───
+
+export const getTeachers = async (filters: {
+  isActive?: boolean;
+  page?: number;
+  limit?: number;
+}) => {
+  const { isActive, page = 1, limit = 20 } = filters;
+
+  const query: any = { role: UserRole.TEACHER, isDeleted: { $ne: true } };
+
+  if (typeof isActive === "boolean") query.isActive = isActive;
+
+  const skip = (page - 1) * limit;
+
+  const [teachers, total] = await Promise.all([
+    User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    User.countDocuments(query),
+  ]);
+
+  const enriched = await Promise.all(
+    teachers.map(async (t) => {
+      const [questionsCreated, quizzesCreated] = await Promise.all([
+        Question.countDocuments({ createdBy: t._id }),
+        Quiz.countDocuments({ createdBy: t._id, isDeleted: { $ne: true } }),
+      ]);
+      return {
+        ...t.toObject(),
+        questionsCreated,
+        quizzesCreated,
+      };
+    })
+  );
+
+  return {
+    teachers: enriched,
+    pagination: { total, page, pages: Math.ceil(total / limit), limit },
+  };
+};
+
+export const toggleTeacherStatus = async (
+  userId: string,
+  isActive: boolean
+) => {
+  const teacher = await User.findOne({
+    userId,
+    role: UserRole.TEACHER,
+    isDeleted: { $ne: true },
+  });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  teacher.isActive = isActive;
+  await teacher.save();
+
+  return {
+    message: `Teacher account ${isActive ? "activated" : "deactivated"} successfully`,
+    teacher: {
+      userId: teacher.userId,
+      email: teacher.email,
+      firstName: teacher.firstName,
+      lastName: teacher.lastName,
+      isActive: teacher.isActive,
+    },
+  };
+};
+
+export const deleteTeacher = async (userId: string) => {
+  const teacher = await User.findOne({
+    userId,
+    role: UserRole.TEACHER,
+    isDeleted: { $ne: true },
+  });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const activeQuizzes = await Quiz.countDocuments({
+    createdBy: teacher._id,
+    status: "active",
+    isDeleted: { $ne: true },
+  });
+
+  if (activeQuizzes > 0) {
+    throw new AppError(
+      `Cannot delete teacher with ${activeQuizzes} active quiz(es). Archive quizzes first.`,
+      400
+    );
+  }
+
+  await Quiz.updateMany(
+    { createdBy: teacher._id, isDeleted: { $ne: true } },
+    { status: "archived" }
+  );
+
+  teacher.isDeleted = true;
+  teacher.isActive = false;
+  teacher.deletedAt = new Date();
+  await teacher.save();
+
+  return { message: "Teacher account deleted successfully" };
+};
+
+// ─── Dashboard Stats ───
+
+export const getDashboardStats = async () => {
+  const [
+    totalStudents,
+    totalTeachers,
+    totalQuestions,
+    totalQuizzes,
+    totalSubmissions,
+    scoreAgg,
+    newUsersThisMonth,
+  ] = await Promise.all([
+    User.countDocuments({ role: UserRole.STUDENT, isDeleted: { $ne: true } }),
+    User.countDocuments({ role: UserRole.TEACHER, isDeleted: { $ne: true } }),
+    Question.countDocuments({ isActive: true }),
+    Quiz.countDocuments({ isDeleted: { $ne: true } }),
+    QuizAttempt.countDocuments({ status: "completed" }),
+    QuizAttempt.aggregate([
+      { $match: { status: "completed" } },
+      { $group: { _id: null, avg: { $avg: "$percentage" } } },
+    ]),
+    User.countDocuments({
+      isDeleted: { $ne: true },
+      createdAt: {
+        $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+      },
+    }),
+  ]);
+
+  const activeStudents = await User.countDocuments({
+    role: UserRole.STUDENT,
+    isActive: true,
+    isDeleted: { $ne: true },
+  });
+  const activeTeachers = await User.countDocuments({
+    role: UserRole.TEACHER,
+    isActive: true,
+    isDeleted: { $ne: true },
+  });
+
+  return {
+    totalStudents,
+    totalTeachers,
+    totalQuestions,
+    totalQuizzes,
+    totalSubmissions,
+    averageScore: Math.round(scoreAgg[0]?.avg || 0),
+    activeUsers: activeStudents + activeTeachers,
+    newUsersThisMonth,
+  };
+};
+
+// ─── CSV Import ───
+
 export const importStudentsFromCSV = async (csvBuffer: Buffer) => {
   const students: any[] = [];
 
@@ -393,7 +590,6 @@ export const importStudentsFromCSV = async (csvBuffer: Buffer) => {
               continue;
             }
 
-            // Check if student already exists
             const existing = await User.findOne({ email });
             if (existing) {
               results.failed++;
@@ -405,19 +601,19 @@ export const importStudentsFromCSV = async (csvBuffer: Buffer) => {
               continue;
             }
 
-            // Create student
             const bcrypt = require("bcrypt");
             const hashedPassword = await bcrypt.hash(password, 12);
 
             await User.create({
               userId: uuidv4(),
+              username: email.split("@")[0] + Math.floor(Math.random() * 1000),
               email,
               firstName,
               lastName,
               grade,
               password: hashedPassword,
               role: UserRole.STUDENT,
-              isEmailVerified: true, // Auto-verify for bulk import
+              isEmailVerified: true,
               isActive: true,
             });
 

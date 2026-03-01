@@ -5,10 +5,9 @@ import {
   generateAccessToken,
   generateRefreshToken,
   generateVerificationCode,
-  generateResetToken,
   verifyRefreshToken,
 } from "../utils/jwt";
-import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/email";
+import { sendVerificationEmail, sendPasswordResetEmail, sendTeacherInviteEmail } from "../utils/email";
 import { AppError } from "../middlewares/errorHandler";
 
 /**
@@ -294,7 +293,7 @@ export const resendVerificationCode = async (
 };
 
 /**
- * Request password reset — sends reset link to email
+ * Request password reset — sends 6-digit OTP to email
  */
 export const forgotPassword = async (
   email: string
@@ -303,35 +302,37 @@ export const forgotPassword = async (
 
   // Do not reveal whether email exists
   if (!user) {
-    return { message: "If that email is registered, a password reset link has been sent." };
+    return { message: "If that email is registered, a reset code has been sent." };
   }
 
-  const resetToken = generateResetToken();
-  const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  const resetCode = generateVerificationCode();
+  const resetExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-  user.resetPasswordToken = resetToken;
-  user.resetPasswordExpiry = resetTokenExpiry;
+  user.resetPasswordToken = resetCode;
+  user.resetPasswordExpiry = resetExpiry;
   await user.save();
 
-  await sendPasswordResetEmail(user.email, user.firstName, resetToken);
+  await sendPasswordResetEmail(user.email, user.firstName, resetCode);
 
-  return { message: "If that email is registered, a password reset link has been sent." };
+  return { message: "If that email is registered, a reset code has been sent." };
 };
 
 /**
- * Reset password using reset token
+ * Reset password using 6-digit OTP code
  */
 export const resetPassword = async (
-  token: string,
+  email: string,
+  code: string,
   newPassword: string
 ): Promise<{ message: string }> => {
-  const user = await User.findOne({
-    resetPasswordToken: token,
-    resetPasswordExpiry: { $gt: new Date() },
-  });
+  const user = await User.findOne({ email }).select("+resetPasswordToken +resetPasswordExpiry");
 
-  if (!user) {
-    throw new AppError("Invalid or expired reset token", 400);
+  if (!user || !user.resetPasswordToken || user.resetPasswordToken !== code) {
+    throw new AppError("Invalid or expired reset code", 400);
+  }
+
+  if (!user.resetPasswordExpiry || user.resetPasswordExpiry < new Date()) {
+    throw new AppError("Reset code has expired. Please request a new one.", 400);
   }
 
   user.password = await bcrypt.hash(newPassword, 12);
@@ -340,6 +341,88 @@ export const resetPassword = async (
   await user.save();
 
   return { message: "Password reset successfully. You can now log in." };
+};
+
+/**
+ * Change password for an authenticated user
+ */
+export const changePassword = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<{ message: string }> => {
+  const user = await User.findOne({ userId }).select("+password");
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  if (!user.password) {
+    throw new AppError("Password change not available for OAuth accounts", 400);
+  }
+
+  const isValid = await bcrypt.compare(currentPassword, user.password);
+  if (!isValid) {
+    throw new AppError("Current password is incorrect", 400);
+  }
+
+  user.password = await bcrypt.hash(newPassword, 12);
+  await user.save();
+
+  return { message: "Password changed successfully." };
+};
+
+/**
+ * Create a teacher account (admin only)
+ */
+export const createTeacher = async (data: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  username?: string;
+}): Promise<{ user: Partial<IUser>; message: string }> => {
+  const existingEmail = await User.findOne({ email: data.email });
+  if (existingEmail) {
+    throw new AppError("User with this email already exists", 400);
+  }
+
+  const rawUsername = data.username || data.email.split("@")[0];
+  const baseUsername = rawUsername.toLowerCase().replace(/[^a-z0-9_]/g, "");
+  let username = baseUsername;
+  const collision = await User.findOne({ username });
+  if (collision) {
+    username = `${baseUsername}_${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  // Generate a temporary password
+  const tempPassword = `Tutor@${Math.floor(100000 + Math.random() * 900000)}`;
+  const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+  const user = await User.create({
+    userId: uuidv4(),
+    username,
+    email: data.email,
+    password: hashedPassword,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    role: UserRole.TEACHER,
+    isEmailVerified: true,
+    isActive: true,
+  });
+
+  await sendTeacherInviteEmail(user.email, user.firstName, tempPassword);
+
+  return {
+    user: {
+      userId: user.userId,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+    },
+    message: "Teacher account created. Login credentials sent to their email.",
+  };
 };
 
 /**

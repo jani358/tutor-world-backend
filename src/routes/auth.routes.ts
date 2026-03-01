@@ -1,9 +1,34 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import * as authController from "../controllers/auth.controller";
 import { validate } from "../middlewares/validation.middleware";
+import { authenticate, isAdmin } from "../middlewares/auth.middleware";
 import * as authValidation from "../validations/auth.validation";
 
 const router = Router();
+
+// Rate limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: {
+    status: "error",
+    message: "Too many attempts. Please try again after 15 minutes.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: {
+    status: "error",
+    message: "Too many OTP requests. Please try again after 15 minutes.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 /**
  * @route   POST /api/auth/register
@@ -12,6 +37,7 @@ const router = Router();
  */
 router.post(
   "/register",
+  authLimiter,
   validate(authValidation.registerSchema),
   authController.register
 );
@@ -23,6 +49,7 @@ router.post(
  */
 router.post(
   "/login",
+  authLimiter,
   validate(authValidation.loginSchema),
   authController.login
 );
@@ -34,6 +61,7 @@ router.post(
  */
 router.post(
   "/verify-email",
+  otpLimiter,
   validate(authValidation.verifyEmailSchema),
   authController.verifyEmail
 );
@@ -45,6 +73,7 @@ router.post(
  */
 router.post(
   "/resend-verification",
+  otpLimiter,
   validate(authValidation.resendVerificationSchema),
   authController.resendVerification
 );
@@ -56,6 +85,7 @@ router.post(
  */
 router.post(
   "/forgot-password",
+  otpLimiter,
   validate(authValidation.forgotPasswordSchema),
   authController.forgotPassword
 );
@@ -67,6 +97,7 @@ router.post(
  */
 router.post(
   "/reset-password",
+  otpLimiter,
   validate(authValidation.resetPasswordSchema),
   authController.resetPassword
 );
@@ -89,8 +120,34 @@ router.post(
  */
 router.post(
   "/google/callback",
+  authLimiter,
   validate(authValidation.googleCallbackSchema),
   authController.googleCallback
+);
+
+/**
+ * @route   POST /api/auth/change-password
+ * @desc    Change password for authenticated user
+ * @access  Private
+ */
+router.post(
+  "/change-password",
+  authenticate,
+  validate(authValidation.changePasswordSchema),
+  authController.changePassword
+);
+
+/**
+ * @route   POST /api/auth/create-teacher
+ * @desc    Admin creates a teacher account (sends invite email)
+ * @access  Private (Admin only)
+ */
+router.post(
+  "/create-teacher",
+  authenticate,
+  isAdmin,
+  validate(authValidation.createTeacherSchema),
+  authController.createTeacher
 );
 
 /**

@@ -24,6 +24,7 @@ export interface IQuiz extends Document {
   startDate?: Date;
   endDate?: Date;
   createdBy: mongoose.Types.ObjectId;
+  isDeleted: boolean;
   imageUrl?: string;
   instructions?: string;
   createdAt: Date;
@@ -110,6 +111,10 @@ const quizSchema = new Schema<IQuiz>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
     imageUrl: {
       type: String,

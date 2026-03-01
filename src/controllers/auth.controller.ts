@@ -107,17 +107,49 @@ export const forgotPassword = asyncHandler(
 );
 
 /**
- * Reset password with token
+ * Reset password with OTP code
  */
 export const resetPassword = asyncHandler(
   async (req: Request, res: Response) => {
-    const { token, newPassword } = req.body;
+    const { email, code, newPassword } = req.body;
 
-    const result = await authService.resetPassword(token, newPassword);
+    const result = await authService.resetPassword(email, code, newPassword);
 
     res.status(200).json({
       status: "success",
       message: result.message,
+    });
+  }
+);
+
+/**
+ * Change password for authenticated user
+ */
+export const changePassword = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { currentPassword, newPassword } = req.body;
+    const userId = (req as any).user?.userId;
+
+    const result = await authService.changePassword(userId, currentPassword, newPassword);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+    });
+  }
+);
+
+/**
+ * Create teacher account (admin only)
+ */
+export const createTeacher = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await authService.createTeacher(req.body);
+
+    res.status(201).json({
+      status: "success",
+      message: result.message,
+      data: result.user,
     });
   }
 );

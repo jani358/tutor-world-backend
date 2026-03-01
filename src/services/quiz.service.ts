@@ -17,6 +17,7 @@ export const getStudentQuizzes = async (userId: string) => {
   const quizzes = await Quiz.find({
     assignedTo: user._id,
     status: QuizStatus.ACTIVE,
+    isDeleted: { $ne: true },
   })
     .select("-questions")
     .populate("createdBy", "firstName lastName")
@@ -58,7 +59,7 @@ export const startQuiz = async (quizId: string, userId: string) => {
     throw new AppError("User not found", 404);
   }
 
-  const quiz = await Quiz.findOne({ quizId }).populate("questions");
+  const quiz = await Quiz.findOne({ quizId, isDeleted: { $ne: true } }).populate("questions");
   if (!quiz) {
     throw new AppError("Quiz not found", 404);
   }
@@ -183,6 +184,25 @@ export const submitQuiz = async (
     throw new AppError("Quiz not found", 404);
   }
 
+  // Time limit enforcement
+  let isLateSubmission = false;
+  if (quiz.timeLimit) {
+    const elapsedMinutes =
+      (new Date().getTime() - attempt.startedAt.getTime()) / 60000;
+    const hardLimit = quiz.timeLimit * 1.5; // 50% grace period
+
+    if (elapsedMinutes > hardLimit) {
+      throw new AppError(
+        "Submission rejected. Time limit exceeded by too much.",
+        400
+      );
+    }
+
+    if (elapsedMinutes > quiz.timeLimit) {
+      isLateSubmission = true;
+    }
+  }
+
   // Grade answers
   let totalScore = 0;
   const gradedAnswers = answers.map((answer) => {
@@ -235,6 +255,7 @@ export const submitQuiz = async (
   attempt.percentage = percentage;
   attempt.isPassed = isPassed;
   attempt.status = AttemptStatus.COMPLETED;
+  attempt.isLateSubmission = isLateSubmission;
   attempt.completedAt = new Date();
   attempt.timeSpent = Math.floor(
     (new Date().getTime() - attempt.startedAt.getTime()) / 1000

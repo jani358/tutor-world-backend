@@ -9,3 +9,6 @@ export type { IQuiz } from "./Quiz.schema";
 
 export { default as QuizAttempt, AttemptStatus } from "./QuizAttempt.schema";
 export type { IQuizAttempt, IAnswer } from "./QuizAttempt.schema";
+
+export { default as AuditLog } from "./AuditLog.schema";
+export type { IAuditLog, AuditAction } from "./AuditLog.schema";

@@ -28,6 +28,7 @@ export interface IQuizAttempt extends Document {
   completedAt?: Date;
   timeSpent?: number; // in seconds
   isPassed: boolean;
+  isLateSubmission: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -110,6 +111,10 @@ const quizAttemptSchema = new Schema<IQuizAttempt>(
       type: Number,
     },
     isPassed: {
+      type: Boolean,
+      default: false,
+    },
+    isLateSubmission: {
       type: Boolean,
       default: false,
     },
