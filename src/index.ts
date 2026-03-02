@@ -12,6 +12,7 @@ import { setupRoutes } from "./routes";
 import { errorHandler } from "./middlewares/errorHandler";
 import { logger } from "./utils/logger";
 import { createAdminUser } from "./utils/seedAdmin";
+import { verifyCloudinaryConnection } from "./config/cloudinary";
 
 const app: Application = express();
 const port = process.env.PORT || 5001;
@@ -43,8 +44,9 @@ const server = app.listen(port, async () => {
 
   try {
     await createAdminUser();
+    await verifyCloudinaryConnection();
   } catch (error) {
-    logger.error("❌ Failed to seed admin user:", error);
+    logger.error("❌ Failed during startup tasks:", error);
   }
 });
 
