@@ -21,6 +21,8 @@ export interface IUser extends Document {
   resetPasswordToken?: string;
   resetPasswordExpiry?: Date;
   isActive: boolean;
+  isDeleted: boolean;
+  deletedAt?: Date;
   grade?: string;
   school?: string;
   dateOfBirth?: Date;
@@ -95,6 +97,13 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+    },
     grade: {
       type: String,
       trim: true,
@@ -120,7 +129,6 @@ const userSchema = new Schema<IUser>(
   }
 );
 
-// Compound and additional indexes (field-level index: true handles the unique ones above)
 userSchema.index({ role: 1 });
 
 export default mongoose.model<IUser>("User", userSchema);

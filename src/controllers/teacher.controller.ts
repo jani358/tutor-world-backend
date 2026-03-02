@@ -1,8 +1,42 @@
 import { Response } from "express";
 import { AuthRequest } from "../middlewares/auth.middleware";
+import * as teacherService from "../services/teacher.service";
 import * as adminService from "../services/admin.service";
 import { asyncHandler } from "../middlewares/errorHandler";
-import { getAuditLogs as fetchAuditLogs } from "../utils/auditLogger";
+
+export const getDashboardStats = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const stats = await teacherService.getDashboardStats(req.user!.userId);
+
+    res.status(200).json({
+      status: "success",
+      data: stats,
+    });
+  }
+);
+
+export const getQuestions = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const filters = {
+      subject: req.query.subject as string,
+      grade: req.query.grade as string,
+      difficulty: req.query.difficulty as string,
+      page: parseInt(req.query.page as string) || 1,
+      limit: parseInt(req.query.limit as string) || 20,
+    };
+
+    const result = await teacherService.getTeacherQuestions(
+      req.user!.userId,
+      filters
+    );
+
+    res.status(200).json({
+      status: "success",
+      data: result.questions,
+      pagination: result.pagination,
+    });
+  }
+);
 
 export const createQuestion = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -51,22 +85,22 @@ export const deleteQuestion = asyncHandler(
   }
 );
 
-export const getQuestions = asyncHandler(
+export const getQuizzes = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const filters = {
-      subject: req.query.subject as string,
-      grade: req.query.grade as string,
-      difficulty: req.query.difficulty as string,
-      isActive: req.query.isActive === "false" ? false : true,
+      status: req.query.status as string,
       page: parseInt(req.query.page as string) || 1,
       limit: parseInt(req.query.limit as string) || 20,
     };
 
-    const result = await adminService.getQuestions(filters);
+    const result = await teacherService.getTeacherQuizzes(
+      req.user!.userId,
+      filters
+    );
 
     res.status(200).json({
       status: "success",
-      data: result.questions,
+      data: result.quizzes,
       pagination: result.pagination,
     });
   }
@@ -128,26 +162,6 @@ export const assignQuiz = asyncHandler(
   }
 );
 
-export const getQuizzes = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const filters = {
-      status: req.query.status as string,
-      subject: req.query.subject as string,
-      grade: req.query.grade as string,
-      page: parseInt(req.query.page as string) || 1,
-      limit: parseInt(req.query.limit as string) || 20,
-    };
-
-    const result = await adminService.getQuizzes(filters);
-
-    res.status(200).json({
-      status: "success",
-      data: result.quizzes,
-      pagination: result.pagination,
-    });
-  }
-);
-
 export const getQuizResults = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { quizId } = req.params;
@@ -167,12 +181,14 @@ export const getStudents = asyncHandler(
         req.query.isActive !== undefined
           ? req.query.isActive === "true"
           : undefined,
-      grade: req.query.grade as string,
       page: parseInt(req.query.page as string) || 1,
       limit: parseInt(req.query.limit as string) || 20,
     };
 
-    const result = await adminService.getStudents(filters);
+    const result = await teacherService.getTeacherStudents(
+      req.user!.userId,
+      filters
+    );
 
     res.status(200).json({
       status: "success",
@@ -182,126 +198,21 @@ export const getStudents = asyncHandler(
   }
 );
 
-export const toggleStudentStatus = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const { userId } = req.params;
-    const { isActive } = req.body;
-
-    const result = await adminService.toggleStudentStatus(userId, isActive);
-
-    res.status(200).json({
-      status: "success",
-      message: result.message,
-      data: result.student,
-    });
-  }
-);
-
-export const deleteStudent = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const { userId } = req.params;
-    const result = await adminService.deleteStudent(userId);
-
-    res.status(200).json({
-      status: "success",
-      message: result.message,
-    });
-  }
-);
-
-export const importStudents = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    if (!req.file) {
-      res.status(400).json({
-        status: "error",
-        message: "Please upload a CSV file",
-      });
-      return;
-    }
-
-    const result = await adminService.importStudentsFromCSV(req.file.buffer);
-
-    res.status(200).json({
-      status: "success",
-      message: "Students imported",
-      data: result,
-    });
-  }
-);
-
-export const getTeachers = asyncHandler(
+export const getResults = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const filters = {
-      isActive:
-        req.query.isActive !== undefined
-          ? req.query.isActive === "true"
-          : undefined,
       page: parseInt(req.query.page as string) || 1,
       limit: parseInt(req.query.limit as string) || 20,
     };
 
-    const result = await adminService.getTeachers(filters);
+    const result = await teacherService.getTeacherResults(
+      req.user!.userId,
+      filters
+    );
 
     res.status(200).json({
       status: "success",
-      data: result.teachers,
-      pagination: result.pagination,
-    });
-  }
-);
-
-export const toggleTeacherStatus = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const { userId } = req.params;
-    const { isActive } = req.body;
-
-    const result = await adminService.toggleTeacherStatus(userId, isActive);
-
-    res.status(200).json({
-      status: "success",
-      message: result.message,
-      data: result.teacher,
-    });
-  }
-);
-
-export const deleteTeacher = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const { userId } = req.params;
-    const result = await adminService.deleteTeacher(userId);
-
-    res.status(200).json({
-      status: "success",
-      message: result.message,
-    });
-  }
-);
-
-export const getDashboardStats = asyncHandler(
-  async (_req: AuthRequest, res: Response) => {
-    const stats = await adminService.getDashboardStats();
-
-    res.status(200).json({
-      status: "success",
-      data: stats,
-    });
-  }
-);
-
-export const getAuditLogs = asyncHandler(
-  async (req: AuthRequest, res: Response) => {
-    const filters = {
-      action: req.query.action as string,
-      targetType: req.query.targetType as string,
-      page: parseInt(req.query.page as string) || 1,
-      limit: parseInt(req.query.limit as string) || 20,
-    };
-
-    const result = await fetchAuditLogs(filters);
-
-    res.status(200).json({
-      status: "success",
-      data: result.logs,
+      data: result.results,
       pagination: result.pagination,
     });
   }

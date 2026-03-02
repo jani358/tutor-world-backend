@@ -1,8 +1,5 @@
 import Joi from "joi";
 
-/**
- * Validation schemas for question management
- */
 export const createQuestionSchema = Joi.object({
   title: Joi.string().min(5).max(500).required().messages({
     "string.min": "Question title must be at least 5 characters",
@@ -73,9 +70,6 @@ export const updateQuestionSchema = Joi.object({
   isActive: Joi.boolean().optional(),
 });
 
-/**
- * Validation schemas for quiz management
- */
 export const createQuizSchema = Joi.object({
   title: Joi.string().min(3).max(200).required().messages({
     "any.required": "Quiz title is required",

@@ -13,17 +13,18 @@ export interface IQuiz extends Document {
   description?: string;
   subject: string;
   grade: string;
-  timeLimit?: number; // in minutes
+  timeLimit?: number;
   totalPoints: number;
   passingScore: number;
   questions: mongoose.Types.ObjectId[];
   isRandomized: boolean;
-  numberOfQuestions?: number; // if randomized, how many questions to show
-  assignedTo: mongoose.Types.ObjectId[]; // student IDs
+  numberOfQuestions?: number;
+  assignedTo: mongoose.Types.ObjectId[];
   status: QuizStatus;
   startDate?: Date;
   endDate?: Date;
   createdBy: mongoose.Types.ObjectId;
+  isDeleted: boolean;
   imageUrl?: string;
   instructions?: string;
   createdAt: Date;
@@ -111,6 +112,10 @@ const quizSchema = new Schema<IQuiz>(
       ref: "User",
       required: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
     imageUrl: {
       type: String,
       trim: true,
@@ -125,7 +130,6 @@ const quizSchema = new Schema<IQuiz>(
   }
 );
 
-// Indexes
 quizSchema.index({ subject: 1, grade: 1 });
 quizSchema.index({ status: 1 });
 quizSchema.index({ assignedTo: 1 });
