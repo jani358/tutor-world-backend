@@ -15,7 +15,13 @@ const FROM = process.env.EMAIL_FROM || "noreply@tutorworld.com";
 const COMPANY_NAME = "Tutor World";
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support@tutorworld.com";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
-const BRAND_COLOR = "#667eea";
+const BRAND_COLOR = "#44A194";
+const BG_PRIMARY = "#FDFBF7";
+const BG_SECONDARY = "#F4F0E4";
+const FG_PRIMARY = "#1a1f2e";
+const FG_SECONDARY = "#537D96";
+const FG_MUTED = "#7a8a96";
+const BORDER_COLOR = "#e5e0d0";
 const YEAR = new Date().getFullYear();
 
 function buildEmail({
@@ -65,13 +71,14 @@ function buildEmail({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <title>${title}</title>
   <style>
     body {
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-      background-color: #ffffff;
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background-color: ${BG_PRIMARY};
       -webkit-text-size-adjust: 100%;
       -ms-text-size-adjust: 100%;
     }
@@ -80,34 +87,31 @@ function buildEmail({
       mso-table-lspace: 0pt;
       mso-table-rspace: 0pt;
     }
-    .email-wrapper { width: 100%; background-color: #ffffff; }
-    .email-container { width: 600px; margin: 0 auto; background-color: #ffffff; }
+    .email-wrapper { width: 100%; background-color: ${BG_PRIMARY}; }
+    .email-container { width: 600px; margin: 0 auto; background-color: ${BG_PRIMARY}; }
     .content-wrapper { padding: 40px 32px; text-align: center; }
     .logo { margin-bottom: 40px; }
-    .logo-text {
-      font-size: 28px;
-      font-weight: 800;
-      color: ${BRAND_COLOR};
-      letter-spacing: -0.5px;
-      text-decoration: none;
+    .logo img {
+      height: 48px;
+      width: auto;
     }
     .greeting {
       font-size: 32px;
       font-weight: 700;
-      color: #000000;
+      color: ${FG_PRIMARY};
       margin: 0 0 20px 0;
       line-height: 1.2;
     }
     .description {
       font-size: 18px;
       font-weight: 400;
-      color: #333333;
+      color: ${FG_SECONDARY};
       margin: 0 0 40px 0;
       line-height: 1.5;
     }
     .code-wrapper { margin-bottom: 40px; }
     .code-container {
-      background-color: #f5f5f5;
+      background-color: ${BG_SECONDARY};
       border-radius: 16px;
       padding: 32px;
       display: inline-block;
@@ -117,7 +121,7 @@ function buildEmail({
     .code-label {
       font-size: 16px;
       font-weight: 600;
-      color: #333333;
+      color: ${FG_PRIMARY};
       margin: 0 0 14px 0;
     }
     .code-display {
@@ -130,7 +134,7 @@ function buildEmail({
     }
     .warning-text {
       font-size: 15px;
-      color: #666666;
+      color: ${FG_MUTED};
       margin: 0 0 36px 0;
       line-height: 1.5;
     }
@@ -145,7 +149,7 @@ function buildEmail({
       display: inline-block;
     }
     .creds-box {
-      background-color: #f5f5f5;
+      background-color: ${BG_SECONDARY};
       border-radius: 12px;
       padding: 24px 28px;
       text-align: left;
@@ -154,29 +158,29 @@ function buildEmail({
     .creds-box p {
       margin: 0 0 10px 0;
       font-size: 16px;
-      color: #333333;
+      color: ${FG_SECONDARY};
     }
     .creds-box p:last-child { margin: 0; }
-    .creds-box strong { color: #000000; }
+    .creds-box strong { color: ${FG_PRIMARY}; }
     .security-note {
       font-size: 13px;
-      color: #999999;
+      color: ${FG_MUTED};
       margin: 28px 0 0 0;
       line-height: 1.5;
     }
     .footer {
-      border-top: 1px solid #e8e8e8;
+      border-top: 1px solid ${BORDER_COLOR};
       margin-top: 40px;
       padding-top: 28px;
     }
     .footer p {
       font-size: 13px;
-      color: #999999;
+      color: ${FG_MUTED};
       margin: 0 0 8px 0;
       line-height: 1.5;
     }
     .footer a { color: ${BRAND_COLOR}; text-decoration: none; }
-    .footer-copy { font-size: 12px; color: #cccccc; margin: 0 !important; }
+    .footer-copy { font-size: 12px; color: ${BORDER_COLOR}; margin: 0 !important; }
     @media screen and (max-width: 640px) {
       .email-container { width: 100% !important; }
       .content-wrapper { padding: 28px 20px !important; }
@@ -194,7 +198,7 @@ function buildEmail({
       <div class="content-wrapper">
 
         <div class="logo">
-          <span class="logo-text">${COMPANY_NAME}</span>
+          <img src="https://res.cloudinary.com/dtn5lbqrp/image/upload/v1772449677/Tutor-Logo_mbg2qj.gif" alt="${COMPANY_NAME}" style="height:48px;width:auto;" />
         </div>
 
         <h1 class="greeting">Hi ${firstName},</h1>
@@ -294,7 +298,7 @@ export const sendTeacherInviteEmail = async (
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Temporary Password:</strong> ${temporaryPassword}</p>
       </div>
-      <p style="font-size:15px;color:#666666;margin:0 0 32px 0;">
+      <p style="font-size:15px;color:${FG_MUTED};margin:0 0 32px 0;">
         Please log in and change your password immediately.
       </p>
     `;
