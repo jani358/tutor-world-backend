@@ -1,7 +1,9 @@
+import { v4 as uuidv4 } from "uuid";
 import Question from "../models/Question.schema";
 import Quiz from "../models/Quiz.schema";
 import QuizAttempt from "../models/QuizAttempt.schema";
-import User from "../models/User.schema";
+import User, { UserRole } from "../models/User.schema";
+import StudentGroup from "../models/StudentGroup.schema";
 import { AppError } from "../middlewares/errorHandler";
 
 export const getDashboardStats = async (userId: string) => {
@@ -196,4 +198,113 @@ export const getTeacherQuizzes = async (
     quizzes,
     pagination: { total, page, pages: Math.ceil(total / limit), limit },
   };
+};
+
+// ── Student Group CRUD ──────────────────────────────────────────────
+
+export const createStudentGroup = async (
+  userId: string,
+  data: { name: string; description?: string; studentIds?: string[]; color?: string }
+) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  let studentObjectIds: import("mongoose").Types.ObjectId[] = [];
+  if (data.studentIds && data.studentIds.length > 0) {
+    const students = await User.find({
+      userId: { $in: data.studentIds },
+      role: UserRole.STUDENT,
+      isDeleted: { $ne: true },
+    }).select("_id");
+    studentObjectIds = students.map((s) => s._id);
+  }
+
+  const group = await StudentGroup.create({
+    groupId: uuidv4(),
+    name: data.name,
+    description: data.description || "",
+    students: studentObjectIds,
+    createdBy: teacher._id,
+    color: data.color || "primary",
+  });
+
+  // Return populated group
+  return StudentGroup.findById(group._id).populate({
+    path: "students",
+    select: "userId firstName lastName email username isActive",
+    match: { isDeleted: { $ne: true } },
+  });
+};
+
+export const getTeacherGroups = async (userId: string) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const groups = await StudentGroup.find({
+    createdBy: teacher._id,
+    isDeleted: { $ne: true },
+  })
+    .populate({
+      path: "students",
+      select: "userId firstName lastName email username isActive",
+      match: { isDeleted: { $ne: true } },
+    })
+    .sort({ createdAt: -1 });
+
+  return groups;
+};
+
+export const updateStudentGroup = async (
+  userId: string,
+  groupId: string,
+  data: { name?: string; description?: string; studentIds?: string[]; color?: string }
+) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const group = await StudentGroup.findOne({
+    groupId,
+    createdBy: teacher._id,
+    isDeleted: { $ne: true },
+  });
+  if (!group) throw new AppError("Group not found", 404);
+
+  if (data.name !== undefined) group.name = data.name;
+  if (data.description !== undefined) group.description = data.description;
+  if (data.color !== undefined) group.color = data.color as any;
+
+  if (data.studentIds !== undefined) {
+    const students = await User.find({
+      userId: { $in: data.studentIds },
+      role: UserRole.STUDENT,
+      isDeleted: { $ne: true },
+    }).select("_id");
+    group.students = students.map((s) => s._id);
+  }
+
+  await group.save();
+
+  return StudentGroup.findById(group._id).populate({
+    path: "students",
+    select: "userId firstName lastName email username isActive",
+    match: { isDeleted: { $ne: true } },
+  });
+};
+
+export const deleteStudentGroup = async (userId: string, groupId: string) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const group = await StudentGroup.findOne({
+    groupId,
+    createdBy: teacher._id,
+    isDeleted: { $ne: true },
+  });
+  if (!group) throw new AppError("Group not found", 404);
+
+  group.isDeleted = true;
+  group.deletedAt = new Date();
+  await group.save();
+
+  return { message: "Group deleted successfully" };
 };
