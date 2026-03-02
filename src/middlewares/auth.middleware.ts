@@ -6,9 +6,6 @@ export interface AuthRequest extends Request {
   user?: TokenPayload;
 }
 
-/**
- * Middleware to authenticate user using JWT token
- */
 export const authenticate = (
   req: AuthRequest,
   res: Response,
@@ -38,9 +35,6 @@ export const authenticate = (
   }
 };
 
-/**
- * Middleware to check if user is an admin
- */
 export const isAdmin = (
   req: AuthRequest,
   res: Response,
@@ -65,9 +59,6 @@ export const isAdmin = (
   next();
 };
 
-/**
- * Middleware to check if user is a teacher
- */
 export const isTeacher = (
   req: AuthRequest,
   res: Response,
@@ -92,9 +83,6 @@ export const isTeacher = (
   next();
 };
 
-/**
- * Middleware to check if user is a student
- */
 export const isStudent = (
   req: AuthRequest,
   res: Response,
@@ -119,9 +107,6 @@ export const isStudent = (
   next();
 };
 
-/**
- * Middleware that allows admin OR teacher (shared access)
- */
 export const isAdminOrTeacher = (
   req: AuthRequest,
   res: Response,

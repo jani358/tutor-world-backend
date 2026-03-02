@@ -2,9 +2,6 @@ import { Request, Response } from "express";
 import * as authService from "../services/auth.service";
 import { asyncHandler } from "../middlewares/errorHandler";
 
-/**
- * Register new student user (US-021)
- */
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const result = await authService.registerUser(req.body);
 
@@ -15,9 +12,6 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-/**
- * Login user (US-001, US-002)
- */
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
@@ -34,11 +28,6 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-/**
- * Google OAuth sign-in / registration.
- * Accepts a Google id_token from the NextAuth callback and returns app-issued JWT tokens.
- * @route POST /api/auth/google/callback
- */
 export const googleCallback = asyncHandler(async (req: Request, res: Response) => {
   const { idToken } = req.body;
 
@@ -60,9 +49,6 @@ export const googleCallback = asyncHandler(async (req: Request, res: Response) =
   });
 });
 
-/**
- * Verify email with 6-digit code (US-022)
- */
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   const { email, code } = req.body;
 
@@ -74,9 +60,6 @@ export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
-/**
- * Resend email verification code
- */
 export const resendVerification = asyncHandler(
   async (req: Request, res: Response) => {
     const { email } = req.body;
@@ -90,9 +73,6 @@ export const resendVerification = asyncHandler(
   }
 );
 
-/**
- * Forgot password — sends reset link to email
- */
 export const forgotPassword = asyncHandler(
   async (req: Request, res: Response) => {
     const { email } = req.body;
@@ -106,14 +86,11 @@ export const forgotPassword = asyncHandler(
   }
 );
 
-/**
- * Reset password with token
- */
 export const resetPassword = asyncHandler(
   async (req: Request, res: Response) => {
-    const { token, newPassword } = req.body;
+    const { email, code, newPassword } = req.body;
 
-    const result = await authService.resetPassword(token, newPassword);
+    const result = await authService.resetPassword(email, code, newPassword);
 
     res.status(200).json({
       status: "success",
@@ -122,10 +99,59 @@ export const resetPassword = asyncHandler(
   }
 );
 
-/**
- * Refresh access token using valid refresh token.
- * Returns new access + rotated refresh token.
- */
+export const changePassword = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { currentPassword, newPassword } = req.body;
+    const userId = (req as any).user?.userId;
+
+    const result = await authService.changePassword(userId, currentPassword, newPassword);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+    });
+  }
+);
+
+export const createTeacher = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await authService.createTeacher(req.body);
+
+    res.status(201).json({
+      status: "success",
+      message: result.message,
+      data: result.user,
+    });
+  }
+);
+
+export const getProfile = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).user?.userId;
+
+    const user = await authService.getProfile(userId);
+
+    res.status(200).json({
+      status: "success",
+      data: user,
+    });
+  }
+);
+
+export const updateProfile = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).user?.userId;
+
+    const result = await authService.updateProfile(userId, req.body);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+      data: result.user,
+    });
+  }
+);
+
 export const refreshToken = asyncHandler(
   async (req: Request, res: Response) => {
     const { refreshToken: token } = req.body;
@@ -142,10 +168,6 @@ export const refreshToken = asyncHandler(
   }
 );
 
-/**
- * Logout user (US-003)
- * JWT invalidation is client-side; this endpoint confirms the action.
- */
 export const logout = asyncHandler(async (_req: Request, res: Response) => {
   res.status(200).json({
     status: "success",

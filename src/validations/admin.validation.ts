@@ -1,8 +1,5 @@
 import Joi from "joi";
 
-/**
- * Validation schemas for question management
- */
 export const createQuestionSchema = Joi.object({
   title: Joi.string().min(5).max(500).required().messages({
     "string.min": "Question title must be at least 5 characters",
@@ -73,9 +70,6 @@ export const updateQuestionSchema = Joi.object({
   isActive: Joi.boolean().optional(),
 });
 
-/**
- * Validation schemas for quiz management
- */
 export const createQuizSchema = Joi.object({
   title: Joi.string().min(3).max(200).required().messages({
     "any.required": "Quiz title is required",
@@ -122,4 +116,26 @@ export const assignQuizSchema = Joi.object({
   studentIds: Joi.array().items(Joi.string()).min(1).required().messages({
     "any.required": "At least one student ID is required",
   }),
+});
+
+export const createStudentGroupSchema = Joi.object({
+  name: Joi.string().min(2).max(100).required().messages({
+    "string.min": "Group name must be at least 2 characters",
+    "string.max": "Group name must not exceed 100 characters",
+    "any.required": "Group name is required",
+  }),
+  description: Joi.string().max(500).optional().allow(""),
+  studentIds: Joi.array().items(Joi.string()).optional().default([]),
+  color: Joi.string()
+    .valid("primary", "success", "warning", "accent", "info", "error")
+    .default("primary"),
+});
+
+export const updateStudentGroupSchema = Joi.object({
+  name: Joi.string().min(2).max(100).optional(),
+  description: Joi.string().max(500).optional().allow(""),
+  studentIds: Joi.array().items(Joi.string()).optional(),
+  color: Joi.string()
+    .valid("primary", "success", "warning", "accent", "info", "error")
+    .optional(),
 });

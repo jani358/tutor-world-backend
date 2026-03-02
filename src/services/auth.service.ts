@@ -5,15 +5,11 @@ import {
   generateAccessToken,
   generateRefreshToken,
   generateVerificationCode,
-  generateResetToken,
   verifyRefreshToken,
 } from "../utils/jwt";
-import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/email";
+import { sendVerificationEmail, sendPasswordResetEmail, sendTeacherInviteEmail } from "../utils/email";
 import { AppError } from "../middlewares/errorHandler";
 
-/**
- * Register a new student user (US-021)
- */
 export const registerUser = async (data: {
   email: string;
   password: string;
@@ -32,7 +28,6 @@ export const registerUser = async (data: {
     throw new AppError("User with this email already exists", 400);
   }
 
-  // Derive username from provided value or email prefix
   const rawUsername = data.username || data.email.split("@")[0];
   const baseUsername = rawUsername.toLowerCase().replace(/[^a-z0-9_]/g, "");
 
@@ -44,7 +39,7 @@ export const registerUser = async (data: {
 
   const hashedPassword = await bcrypt.hash(data.password, 12);
   const verificationCode = generateVerificationCode();
-  const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  const verificationCodeExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   const user = await User.create({
     userId: uuidv4(),
@@ -77,9 +72,6 @@ export const registerUser = async (data: {
   };
 };
 
-/**
- * Login user with email and password (US-001, US-002)
- */
 export const loginUser = async (
   email: string,
   password: string
@@ -131,10 +123,6 @@ export const loginUser = async (
   };
 };
 
-/**
- * Sign in or register via Google OAuth.
- * Called by the /auth/google/callback endpoint after NextAuth verifies the id_token.
- */
 export const googleSignIn = async (idToken: string): Promise<{
   user: Partial<IUser>;
   accessToken: string;
@@ -181,7 +169,7 @@ export const googleSignIn = async (idToken: string): Promise<{
       userId: uuidv4(),
       username,
       email,
-      password: await bcrypt.hash(uuidv4(), 12), // placeholder — Google users sign in via OAuth
+      password: await bcrypt.hash(uuidv4(), 12),
       firstName,
       lastName,
       role: UserRole.STUDENT,
@@ -226,9 +214,6 @@ export const googleSignIn = async (idToken: string): Promise<{
   };
 };
 
-/**
- * Verify email with 6-digit code (US-022)
- */
 export const verifyEmail = async (
   email: string,
   code: string
@@ -265,9 +250,6 @@ export const verifyEmail = async (
   return { message: "Email verified successfully. You can now log in." };
 };
 
-/**
- * Resend email verification code
- */
 export const resendVerificationCode = async (
   email: string
 ): Promise<{ message: string }> => {
@@ -293,45 +275,40 @@ export const resendVerificationCode = async (
   return { message: "Verification code sent successfully" };
 };
 
-/**
- * Request password reset — sends reset link to email
- */
 export const forgotPassword = async (
   email: string
 ): Promise<{ message: string }> => {
   const user = await User.findOne({ email });
 
-  // Do not reveal whether email exists
   if (!user) {
-    return { message: "If that email is registered, a password reset link has been sent." };
+    return { message: "If that email is registered, a reset code has been sent." };
   }
 
-  const resetToken = generateResetToken();
-  const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  const resetCode = generateVerificationCode();
+  const resetExpiry = new Date(Date.now() + 15 * 60 * 1000);
 
-  user.resetPasswordToken = resetToken;
-  user.resetPasswordExpiry = resetTokenExpiry;
+  user.resetPasswordToken = resetCode;
+  user.resetPasswordExpiry = resetExpiry;
   await user.save();
 
-  await sendPasswordResetEmail(user.email, user.firstName, resetToken);
+  await sendPasswordResetEmail(user.email, user.firstName, resetCode);
 
-  return { message: "If that email is registered, a password reset link has been sent." };
+  return { message: "If that email is registered, a reset code has been sent." };
 };
 
-/**
- * Reset password using reset token
- */
 export const resetPassword = async (
-  token: string,
+  email: string,
+  code: string,
   newPassword: string
 ): Promise<{ message: string }> => {
-  const user = await User.findOne({
-    resetPasswordToken: token,
-    resetPasswordExpiry: { $gt: new Date() },
-  });
+  const user = await User.findOne({ email }).select("+resetPasswordToken +resetPasswordExpiry");
 
-  if (!user) {
-    throw new AppError("Invalid or expired reset token", 400);
+  if (!user || !user.resetPasswordToken || user.resetPasswordToken !== code) {
+    throw new AppError("Invalid or expired reset code", 400);
+  }
+
+  if (!user.resetPasswordExpiry || user.resetPasswordExpiry < new Date()) {
+    throw new AppError("Reset code has expired. Please request a new one.", 400);
   }
 
   user.password = await bcrypt.hash(newPassword, 12);
@@ -342,10 +319,163 @@ export const resetPassword = async (
   return { message: "Password reset successfully. You can now log in." };
 };
 
-/**
- * Refresh access token using valid refresh token.
- * Returns a new access token and a rotated refresh token.
- */
+export const changePassword = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<{ message: string }> => {
+  const user = await User.findOne({ userId }).select("+password");
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  if (!user.password) {
+    throw new AppError("Password change not available for OAuth accounts", 400);
+  }
+
+  const isValid = await bcrypt.compare(currentPassword, user.password);
+  if (!isValid) {
+    throw new AppError("Current password is incorrect", 400);
+  }
+
+  user.password = await bcrypt.hash(newPassword, 12);
+  await user.save();
+
+  return { message: "Password changed successfully." };
+};
+
+export const createTeacher = async (data: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  username?: string;
+}): Promise<{ user: Partial<IUser>; message: string }> => {
+  const existingEmail = await User.findOne({ email: data.email });
+  if (existingEmail) {
+    throw new AppError("User with this email already exists", 400);
+  }
+
+  const rawUsername = data.username || data.email.split("@")[0];
+  const baseUsername = rawUsername.toLowerCase().replace(/[^a-z0-9_]/g, "");
+  let username = baseUsername;
+  const collision = await User.findOne({ username });
+  if (collision) {
+    username = `${baseUsername}_${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  const tempPassword = `Tutor@${Math.floor(100000 + Math.random() * 900000)}`;
+  const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+  const user = await User.create({
+    userId: uuidv4(),
+    username,
+    email: data.email,
+    password: hashedPassword,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    role: UserRole.TEACHER,
+    isEmailVerified: true,
+    isActive: true,
+  });
+
+  await sendTeacherInviteEmail(user.email, user.firstName, tempPassword);
+
+  return {
+    user: {
+      userId: user.userId,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+    },
+    message: "Teacher account created. Login credentials sent to their email.",
+  };
+};
+
+export const getProfile = async (
+  userId: string
+): Promise<Partial<IUser>> => {
+  const user = await User.findOne({ userId, isActive: true });
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  return {
+    userId: user.userId,
+    username: user.username,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    avatar: user.avatar,
+    grade: user.grade,
+    school: user.school,
+    dateOfBirth: user.dateOfBirth,
+    createdAt: user.createdAt,
+  };
+};
+
+export const updateProfile = async (
+  userId: string,
+  data: { firstName?: string; lastName?: string; email?: string }
+): Promise<{ user: Partial<IUser>; message: string }> => {
+  const user = await User.findOne({ userId, isActive: true });
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const changes: Array<{ field: string; oldValue?: string; newValue?: string }> = [];
+
+  if (data.firstName && data.firstName !== user.firstName) {
+    changes.push({ field: "firstName", oldValue: user.firstName, newValue: data.firstName });
+    user.firstName = data.firstName;
+  }
+  if (data.lastName && data.lastName !== user.lastName) {
+    changes.push({ field: "lastName", oldValue: user.lastName, newValue: data.lastName });
+    user.lastName = data.lastName;
+  }
+  if (data.email && data.email !== user.email) {
+    const existing = await User.findOne({ email: data.email });
+    if (existing) {
+      throw new AppError("Email is already in use by another account", 400);
+    }
+    changes.push({ field: "email", oldValue: user.email, newValue: data.email });
+    user.email = data.email;
+  }
+
+  if (changes.length === 0) {
+    return {
+      user: {
+        userId: user.userId,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        avatar: user.avatar,
+      },
+      message: "No changes detected.",
+    };
+  }
+
+  await user.save();
+
+  return {
+    user: {
+      userId: user.userId,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      avatar: user.avatar,
+    },
+    message: "Profile updated successfully.",
+  };
+};
+
 export const refreshAccessToken = async (
   refreshToken: string
 ): Promise<{ accessToken: string; refreshToken: string }> => {

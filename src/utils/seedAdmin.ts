@@ -3,14 +3,10 @@ import { v4 as uuidv4 } from "uuid";
 import User, { UserRole } from "../models/User.schema";
 import { logger } from "./logger";
 
-/**
- * Create default admin user if not exists
- */
 export const createAdminUser = async (): Promise<void> => {
   try {
     const adminEmail = process.env.ADMIN_EMAIL || "admin@tutorworld.com";
 
-    // Check if admin already exists
     const existingAdmin = await User.findOne({ email: adminEmail });
 
     if (existingAdmin) {
@@ -18,7 +14,6 @@ export const createAdminUser = async (): Promise<void> => {
       return;
     }
 
-    // Create admin user
     const adminPassword = process.env.ADMIN_PASSWORD || "Admin@123";
     const hashedPassword = await bcrypt.hash(adminPassword, 12);
 

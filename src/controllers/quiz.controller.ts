@@ -3,9 +3,6 @@ import { AuthRequest } from "../middlewares/auth.middleware";
 import * as quizService from "../services/quiz.service";
 import { asyncHandler } from "../middlewares/errorHandler";
 
-/**
- * Get all quizzes assigned to student (US-007)
- */
 export const getMyQuizzes = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const quizzes = await quizService.getStudentQuizzes(req.user!.userId);
@@ -17,9 +14,6 @@ export const getMyQuizzes = asyncHandler(
   }
 );
 
-/**
- * Start a quiz (US-004)
- */
 export const startQuiz = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { quizId } = req.params;
@@ -33,9 +27,6 @@ export const startQuiz = asyncHandler(
   }
 );
 
-/**
- * Submit quiz answers (US-006, US-010, US-011)
- */
 export const submitQuiz = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { attemptId } = req.params;
@@ -55,9 +46,6 @@ export const submitQuiz = asyncHandler(
   }
 );
 
-/**
- * Get quiz result (US-010, US-011, US-012)
- */
 export const getResult = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { attemptId } = req.params;
@@ -74,9 +62,6 @@ export const getResult = asyncHandler(
   }
 );
 
-/**
- * Get all quiz attempts (US-013)
- */
 export const getMyAttempts = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const attempts = await quizService.getStudentAttempts(req.user!.userId);

@@ -1,0 +1,310 @@
+import { v4 as uuidv4 } from "uuid";
+import Question from "../models/Question.schema";
+import Quiz from "../models/Quiz.schema";
+import QuizAttempt from "../models/QuizAttempt.schema";
+import User, { UserRole } from "../models/User.schema";
+import StudentGroup from "../models/StudentGroup.schema";
+import { AppError } from "../middlewares/errorHandler";
+
+export const getDashboardStats = async (userId: string) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const [questionsCreated, quizzesCreated] = await Promise.all([
+    Question.countDocuments({ createdBy: teacher._id, isActive: true }),
+    Quiz.countDocuments({ createdBy: teacher._id, isDeleted: { $ne: true } }),
+  ]);
+
+  const teacherQuizzes = await Quiz.find({
+    createdBy: teacher._id,
+    isDeleted: { $ne: true },
+  }).select("assignedTo");
+
+  const uniqueStudentIds = new Set<string>();
+  teacherQuizzes.forEach((q) => {
+    q.assignedTo.forEach((id) => uniqueStudentIds.add(id.toString()));
+  });
+
+  const activeStudents = await User.countDocuments({
+    _id: { $in: [...uniqueStudentIds] },
+    isActive: true,
+    isDeleted: { $ne: true },
+  });
+
+  const quizIds = teacherQuizzes.map((q) => q._id);
+
+  const totalSubmissions = await QuizAttempt.countDocuments({
+    quizId: { $in: quizIds },
+    status: "completed",
+  });
+
+  const scoreAgg = await QuizAttempt.aggregate([
+    { $match: { quizId: { $in: quizIds }, status: "completed" } },
+    { $group: { _id: null, avg: { $avg: "$percentage" } } },
+  ]);
+
+  return {
+    questionsCreated,
+    quizzesCreated,
+    activeStudents,
+    totalSubmissions,
+    averageScore: Math.round(scoreAgg[0]?.avg || 0),
+  };
+};
+
+export const getTeacherQuestions = async (
+  userId: string,
+  filters: {
+    subject?: string;
+    grade?: string;
+    difficulty?: string;
+    page?: number;
+    limit?: number;
+  }
+) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const { subject, grade, difficulty, page = 1, limit = 20 } = filters;
+
+  const query: any = { createdBy: teacher._id, isActive: true };
+  if (subject) query.subject = subject;
+  if (grade) query.grade = grade;
+  if (difficulty) query.difficulty = difficulty;
+
+  const skip = (page - 1) * limit;
+
+  const [questions, total] = await Promise.all([
+    Question.find(query)
+      .populate("createdBy", "firstName lastName")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Question.countDocuments(query),
+  ]);
+
+  return {
+    questions,
+    pagination: { total, page, pages: Math.ceil(total / limit), limit },
+  };
+};
+
+export const getTeacherStudents = async (
+  userId: string,
+  filters: { isActive?: boolean; page?: number; limit?: number }
+) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const teacherQuizzes = await Quiz.find({
+    createdBy: teacher._id,
+    isDeleted: { $ne: true },
+  }).select("assignedTo");
+
+  const uniqueStudentIds = new Set<string>();
+  teacherQuizzes.forEach((q) => {
+    q.assignedTo.forEach((id) => uniqueStudentIds.add(id.toString()));
+  });
+
+  const { isActive, page = 1, limit = 20 } = filters;
+  const query: any = {
+    _id: { $in: [...uniqueStudentIds] },
+    isDeleted: { $ne: true },
+  };
+  if (typeof isActive === "boolean") query.isActive = isActive;
+
+  const skip = (page - 1) * limit;
+
+  const [students, total] = await Promise.all([
+    User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    User.countDocuments(query),
+  ]);
+
+  return {
+    students,
+    pagination: { total, page, pages: Math.ceil(total / limit), limit },
+  };
+};
+
+export const getTeacherResults = async (
+  userId: string,
+  filters: { page?: number; limit?: number }
+) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const teacherQuizzes = await Quiz.find({
+    createdBy: teacher._id,
+    isDeleted: { $ne: true },
+  }).select("_id");
+
+  const quizIds = teacherQuizzes.map((q) => q._id);
+  const { page = 1, limit = 20 } = filters;
+  const skip = (page - 1) * limit;
+
+  const [results, total] = await Promise.all([
+    QuizAttempt.find({
+      quizId: { $in: quizIds },
+      status: "completed",
+    })
+      .populate("quizId", "title subject grade")
+      .populate("studentId", "firstName lastName email userId")
+      .sort({ completedAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    QuizAttempt.countDocuments({
+      quizId: { $in: quizIds },
+      status: "completed",
+    }),
+  ]);
+
+  return {
+    results,
+    pagination: { total, page, pages: Math.ceil(total / limit), limit },
+  };
+};
+
+export const getTeacherQuizzes = async (
+  userId: string,
+  filters: { status?: string; page?: number; limit?: number }
+) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const { status, page = 1, limit = 20 } = filters;
+  const query: any = {
+    createdBy: teacher._id,
+    isDeleted: { $ne: true },
+  };
+  if (status) query.status = status;
+
+  const skip = (page - 1) * limit;
+
+  const [quizzes, total] = await Promise.all([
+    Quiz.find(query)
+      .populate("createdBy", "firstName lastName")
+      .select("-questions")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Quiz.countDocuments(query),
+  ]);
+
+  return {
+    quizzes,
+    pagination: { total, page, pages: Math.ceil(total / limit), limit },
+  };
+};
+
+// ── Student Group CRUD ──────────────────────────────────────────────
+
+export const createStudentGroup = async (
+  userId: string,
+  data: { name: string; description?: string; studentIds?: string[]; color?: string }
+) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  let studentObjectIds: import("mongoose").Types.ObjectId[] = [];
+  if (data.studentIds && data.studentIds.length > 0) {
+    const students = await User.find({
+      userId: { $in: data.studentIds },
+      role: UserRole.STUDENT,
+      isDeleted: { $ne: true },
+    }).select("_id");
+    studentObjectIds = students.map((s) => s._id);
+  }
+
+  const group = await StudentGroup.create({
+    groupId: uuidv4(),
+    name: data.name,
+    description: data.description || "",
+    students: studentObjectIds,
+    createdBy: teacher._id,
+    color: data.color || "primary",
+  });
+
+  // Return populated group
+  return StudentGroup.findById(group._id).populate({
+    path: "students",
+    select: "userId firstName lastName email username isActive",
+    match: { isDeleted: { $ne: true } },
+  });
+};
+
+export const getTeacherGroups = async (userId: string) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const groups = await StudentGroup.find({
+    createdBy: teacher._id,
+    isDeleted: { $ne: true },
+  })
+    .populate({
+      path: "students",
+      select: "userId firstName lastName email username isActive",
+      match: { isDeleted: { $ne: true } },
+    })
+    .sort({ createdAt: -1 });
+
+  return groups;
+};
+
+export const updateStudentGroup = async (
+  userId: string,
+  groupId: string,
+  data: { name?: string; description?: string; studentIds?: string[]; color?: string }
+) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const group = await StudentGroup.findOne({
+    groupId,
+    createdBy: teacher._id,
+    isDeleted: { $ne: true },
+  });
+  if (!group) throw new AppError("Group not found", 404);
+
+  if (data.name !== undefined) group.name = data.name;
+  if (data.description !== undefined) group.description = data.description;
+  if (data.color !== undefined) group.color = data.color as any;
+
+  if (data.studentIds !== undefined) {
+    const students = await User.find({
+      userId: { $in: data.studentIds },
+      role: UserRole.STUDENT,
+      isDeleted: { $ne: true },
+    }).select("_id");
+    group.students = students.map((s) => s._id);
+  }
+
+  await group.save();
+
+  return StudentGroup.findById(group._id).populate({
+    path: "students",
+    select: "userId firstName lastName email username isActive",
+    match: { isDeleted: { $ne: true } },
+  });
+};
+
+export const deleteStudentGroup = async (userId: string, groupId: string) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const group = await StudentGroup.findOne({
+    groupId,
+    createdBy: teacher._id,
+    isDeleted: { $ne: true },
+  });
+  if (!group) throw new AppError("Group not found", 404);
+
+  group.isDeleted = true;
+  group.deletedAt = new Date();
+  await group.save();
+
+  return { message: "Group deleted successfully" };
+};

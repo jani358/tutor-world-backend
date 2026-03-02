@@ -11,7 +11,7 @@ export interface IAnswer {
   selectedAnswer: string | string[];
   isCorrect: boolean;
   pointsEarned: number;
-  timeSpent?: number; // in seconds
+  timeSpent?: number;
 }
 
 export interface IQuizAttempt extends Document {
@@ -26,8 +26,9 @@ export interface IQuizAttempt extends Document {
   status: AttemptStatus;
   startedAt: Date;
   completedAt?: Date;
-  timeSpent?: number; // in seconds
+  timeSpent?: number;
   isPassed: boolean;
+  isLateSubmission: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -113,13 +114,16 @@ const quizAttemptSchema = new Schema<IQuizAttempt>(
       type: Boolean,
       default: false,
     },
+    isLateSubmission: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Indexes
 quizAttemptSchema.index({ studentId: 1, quizId: 1 });
 quizAttemptSchema.index({ status: 1 });
 quizAttemptSchema.index({ completedAt: -1 });

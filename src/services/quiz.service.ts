@@ -5,9 +5,6 @@ import User from "../models/User.schema";
 import { AppError } from "../middlewares/errorHandler";
 import mongoose from "mongoose";
 
-/**
- * Get all quizzes assigned to a student (US-007)
- */
 export const getStudentQuizzes = async (userId: string) => {
   const user = await User.findOne({ userId });
   if (!user) {
@@ -17,12 +14,12 @@ export const getStudentQuizzes = async (userId: string) => {
   const quizzes = await Quiz.find({
     assignedTo: user._id,
     status: QuizStatus.ACTIVE,
+    isDeleted: { $ne: true },
   })
     .select("-questions")
     .populate("createdBy", "firstName lastName")
     .sort({ createdAt: -1 });
 
-  // Get attempt counts for each quiz
   const quizzesWithAttempts = await Promise.all(
     quizzes.map(async (quiz) => {
       const attemptCount = await QuizAttempt.countDocuments({
@@ -49,31 +46,25 @@ export const getStudentQuizzes = async (userId: string) => {
   return quizzesWithAttempts;
 };
 
-/**
- * Get quiz details and start quiz (US-004)
- */
 export const startQuiz = async (quizId: string, userId: string) => {
   const user = await User.findOne({ userId });
   if (!user) {
     throw new AppError("User not found", 404);
   }
 
-  const quiz = await Quiz.findOne({ quizId }).populate("questions");
+  const quiz = await Quiz.findOne({ quizId, isDeleted: { $ne: true } }).populate("questions");
   if (!quiz) {
     throw new AppError("Quiz not found", 404);
   }
 
-  // Check if quiz is assigned to student
   if (!quiz.assignedTo.some((id) => id.toString() === user._id.toString())) {
     throw new AppError("You are not assigned to this quiz", 403);
   }
 
-  // Check if quiz is active
   if (quiz.status !== QuizStatus.ACTIVE) {
     throw new AppError("This quiz is not currently available", 400);
   }
 
-  // Check date range
   if (quiz.startDate && new Date() < quiz.startDate) {
     throw new AppError("This quiz has not started yet", 400);
   }
@@ -81,7 +72,6 @@ export const startQuiz = async (quizId: string, userId: string) => {
     throw new AppError("This quiz has ended", 400);
   }
 
-  // Check for incomplete attempts
   const incompleteAttempt = await QuizAttempt.findOne({
     quizId: quiz._id,
     studentId: user._id,
@@ -105,7 +95,6 @@ export const startQuiz = async (quizId: string, userId: string) => {
     };
   }
 
-  // Get questions (randomized if needed) - US-004, US-005
   let selectedQuestions = quiz.questions as any[];
   if (quiz.isRandomized && quiz.numberOfQuestions) {
     selectedQuestions = selectedQuestions
@@ -113,7 +102,6 @@ export const startQuiz = async (quizId: string, userId: string) => {
       .slice(0, quiz.numberOfQuestions);
   }
 
-  // Create new attempt
   const attempt = await QuizAttempt.create({
     attemptId: uuidv4(),
     quizId: quiz._id,
@@ -126,7 +114,6 @@ export const startQuiz = async (quizId: string, userId: string) => {
     startedAt: new Date(),
   });
 
-  // Remove correct answers from response
   const sanitizedQuestions = selectedQuestions.map((q) => ({
     _id: q._id,
     questionId: q.questionId,
@@ -152,9 +139,6 @@ export const startQuiz = async (quizId: string, userId: string) => {
   };
 };
 
-/**
- * Submit quiz answers (US-006, US-010, US-011)
- */
 export const submitQuiz = async (
   attemptId: string,
   userId: string,
@@ -183,7 +167,24 @@ export const submitQuiz = async (
     throw new AppError("Quiz not found", 404);
   }
 
-  // Grade answers
+  let isLateSubmission = false;
+  if (quiz.timeLimit) {
+    const elapsedMinutes =
+      (new Date().getTime() - attempt.startedAt.getTime()) / 60000;
+    const hardLimit = quiz.timeLimit * 1.5;
+
+    if (elapsedMinutes > hardLimit) {
+      throw new AppError(
+        "Submission rejected. Time limit exceeded by too much.",
+        400
+      );
+    }
+
+    if (elapsedMinutes > quiz.timeLimit) {
+      isLateSubmission = true;
+    }
+  }
+
   let totalScore = 0;
   const gradedAnswers = answers.map((answer) => {
     const question: any = quiz.questions.find(
@@ -201,7 +202,6 @@ export const submitQuiz = async (
 
     let isCorrect = false;
 
-    // Check answer based on question type
     if (question.questionType === "multiple_choice") {
       const correctOption = question.options.find((opt: any) => opt.isCorrect);
       isCorrect = correctOption?.text === answer.selectedAnswer;
@@ -225,23 +225,21 @@ export const submitQuiz = async (
     };
   });
 
-  // Calculate percentage
   const percentage = (totalScore / quiz.totalPoints) * 100;
   const isPassed = percentage >= quiz.passingScore;
 
-  // Update attempt
   attempt.answers = gradedAnswers;
   attempt.score = totalScore;
   attempt.percentage = percentage;
   attempt.isPassed = isPassed;
   attempt.status = AttemptStatus.COMPLETED;
+  attempt.isLateSubmission = isLateSubmission;
   attempt.completedAt = new Date();
   attempt.timeSpent = Math.floor(
     (new Date().getTime() - attempt.startedAt.getTime()) / 1000
   );
   await attempt.save();
 
-  // Return full results with correct answers (US-011)
   const detailedResults = await QuizAttempt.findById(attempt._id)
     .populate({
       path: "quizId",
@@ -256,9 +254,6 @@ export const submitQuiz = async (
   return detailedResults;
 };
 
-/**
- * Get quiz result details (US-010, US-011, US-012)
- */
 export const getQuizResult = async (attemptId: string, userId: string) => {
   const user = await User.findOne({ userId });
   if (!user) {
@@ -288,9 +283,6 @@ export const getQuizResult = async (attemptId: string, userId: string) => {
   return result;
 };
 
-/**
- * Get all quiz attempts for a student (US-013)
- */
 export const getStudentAttempts = async (userId: string) => {
   const user = await User.findOne({ userId });
   if (!user) {
