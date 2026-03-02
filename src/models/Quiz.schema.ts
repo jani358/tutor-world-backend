@@ -133,5 +133,7 @@ const quizSchema = new Schema<IQuiz>(
 quizSchema.index({ subject: 1, grade: 1 });
 quizSchema.index({ status: 1 });
 quizSchema.index({ assignedTo: 1 });
+quizSchema.index({ createdBy: 1, isDeleted: 1 });
+quizSchema.index({ status: 1, isDeleted: 1 });
 
 export default mongoose.model<IQuiz>("Quiz", quizSchema);

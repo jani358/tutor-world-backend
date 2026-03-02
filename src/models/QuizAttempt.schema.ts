@@ -127,5 +127,6 @@ const quizAttemptSchema = new Schema<IQuizAttempt>(
 quizAttemptSchema.index({ studentId: 1, quizId: 1 });
 quizAttemptSchema.index({ status: 1 });
 quizAttemptSchema.index({ completedAt: -1 });
+quizAttemptSchema.index({ quizId: 1, isPassed: 1 });
 
 export default mongoose.model<IQuizAttempt>("QuizAttempt", quizAttemptSchema);

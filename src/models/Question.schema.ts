@@ -124,5 +124,6 @@ const questionSchema = new Schema<IQuestion>(
 questionSchema.index({ subject: 1, grade: 1, difficulty: 1 });
 questionSchema.index({ isActive: 1 });
 questionSchema.index({ tags: 1 });
+questionSchema.index({ createdBy: 1, isActive: 1 });
 
 export default mongoose.model<IQuestion>("Question", questionSchema);
