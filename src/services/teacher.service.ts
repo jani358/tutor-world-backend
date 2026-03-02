@@ -200,8 +200,6 @@ export const getTeacherQuizzes = async (
   };
 };
 
-// ── Student Group CRUD ──────────────────────────────────────────────
-
 export const createStudentGroup = async (
   userId: string,
   data: { name: string; description?: string; studentIds?: string[]; color?: string }
@@ -228,7 +226,6 @@ export const createStudentGroup = async (
     color: data.color || "primary",
   });
 
-  // Return populated group
   return StudentGroup.findById(group._id).populate({
     path: "students",
     select: "userId firstName lastName email username isActive",

@@ -124,3 +124,11 @@ export const googleCallbackSchema = Joi.object({
     "any.required": "Google id_token is required",
   }),
 });
+
+export const checkUsernameSchema = Joi.object({
+  username: Joi.string().min(3).max(30).required().messages({
+    "string.min": "Username must be at least 3 characters",
+    "string.max": "Username must not exceed 30 characters",
+    "any.required": "Username is required",
+  }),
+});

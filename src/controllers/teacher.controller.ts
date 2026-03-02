@@ -218,8 +218,6 @@ export const getResults = asyncHandler(
   }
 );
 
-// ── Student Groups ──────────────────────────────────────────────────
-
 export const getGroups = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const groups = await teacherService.getTeacherGroups(req.user!.userId);
