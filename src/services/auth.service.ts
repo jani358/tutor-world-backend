@@ -350,6 +350,7 @@ export const createTeacher = async (data: {
   firstName: string;
   lastName: string;
   username?: string;
+  password?: string;
 }): Promise<{ user: Partial<IUser>; message: string }> => {
   const existingEmail = await User.findOne({ email: data.email });
   if (existingEmail) {
@@ -364,7 +365,7 @@ export const createTeacher = async (data: {
     username = `${baseUsername}_${Math.floor(1000 + Math.random() * 9000)}`;
   }
 
-  const tempPassword = `Tutor@${Math.floor(100000 + Math.random() * 900000)}`;
+  const tempPassword = data.password || `Tutor@${Math.floor(100000 + Math.random() * 900000)}`;
   const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
   const user = await User.create({
@@ -501,4 +502,14 @@ export const refreshAccessToken = async (
   const newRefreshToken = generateRefreshToken(tokenPayload);
 
   return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+};
+
+export const checkUsername = async (
+  username: string
+): Promise<{ available: boolean }> => {
+  const existing = await User.findOne({
+    username: username.toLowerCase(),
+    isDeleted: { $ne: true },
+  });
+  return { available: !existing };
 };

@@ -37,4 +37,21 @@ router.delete("/teachers/:userId", adminController.deleteTeacher);
 
 router.get("/audit-logs", adminController.getAuditLogs);
 
+router.get("/classes", adminController.getClasses);
+router.post("/classes", validate(adminValidation.createClassSchema), adminController.createClass);
+router.put("/classes/:classId", validate(adminValidation.updateClassSchema), adminController.updateClass);
+router.delete("/classes/:classId", adminController.deleteClass);
+router.patch("/classes/:classId/assign-teacher", validate(adminValidation.assignTeacherSchema), adminController.assignTeacherToClass);
+router.patch("/students/:userId/assign-class", validate(adminValidation.assignStudentClassSchema), adminController.assignStudentToClass);
+
+router.get("/subjects", adminController.getSubjects);
+router.post("/subjects", validate(adminValidation.createSubjectSchema), adminController.createSubject);
+router.patch("/subjects/:subjectId/toggle-status", adminController.toggleSubjectStatus);
+router.delete("/subjects/:subjectId", adminController.deleteSubject);
+
+router.get("/notifications", adminController.getNotifications);
+router.post("/notifications", validate(adminValidation.createNotificationSchema), adminController.createNotification);
+router.delete("/notifications/:notificationId", adminController.deleteNotification);
+router.patch("/notifications/:notificationId/read", adminController.markNotificationRead);
+
 export default router;

@@ -174,3 +174,15 @@ export const logout = asyncHandler(async (_req: Request, res: Response) => {
     message: "Logout successful",
   });
 });
+
+export const checkUsername = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { username } = req.body;
+    const result = await authService.checkUsername(username);
+
+    res.status(200).json({
+      status: "success",
+      data: { available: result.available },
+    });
+  }
+);

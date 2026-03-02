@@ -110,4 +110,10 @@ router.post(
 
 router.post("/logout", authController.logout);
 
+router.post(
+  "/check-username",
+  validate(authValidation.checkUsernameSchema),
+  authController.checkUsername
+);
+
 export default router;
