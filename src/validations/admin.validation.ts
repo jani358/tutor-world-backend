@@ -117,3 +117,25 @@ export const assignQuizSchema = Joi.object({
     "any.required": "At least one student ID is required",
   }),
 });
+
+export const createStudentGroupSchema = Joi.object({
+  name: Joi.string().min(2).max(100).required().messages({
+    "string.min": "Group name must be at least 2 characters",
+    "string.max": "Group name must not exceed 100 characters",
+    "any.required": "Group name is required",
+  }),
+  description: Joi.string().max(500).optional().allow(""),
+  studentIds: Joi.array().items(Joi.string()).optional().default([]),
+  color: Joi.string()
+    .valid("primary", "success", "warning", "accent", "info", "error")
+    .default("primary"),
+});
+
+export const updateStudentGroupSchema = Joi.object({
+  name: Joi.string().min(2).max(100).optional(),
+  description: Joi.string().max(500).optional().allow(""),
+  studentIds: Joi.array().items(Joi.string()).optional(),
+  color: Joi.string()
+    .valid("primary", "success", "warning", "accent", "info", "error")
+    .optional(),
+});

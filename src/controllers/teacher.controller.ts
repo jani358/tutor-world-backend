@@ -217,3 +217,63 @@ export const getResults = asyncHandler(
     });
   }
 );
+
+// ── Student Groups ──────────────────────────────────────────────────
+
+export const getGroups = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const groups = await teacherService.getTeacherGroups(req.user!.userId);
+
+    res.status(200).json({
+      status: "success",
+      data: groups,
+    });
+  }
+);
+
+export const createGroup = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const group = await teacherService.createStudentGroup(
+      req.user!.userId,
+      req.body
+    );
+
+    res.status(201).json({
+      status: "success",
+      message: "Group created successfully",
+      data: group,
+    });
+  }
+);
+
+export const updateGroup = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { groupId } = req.params;
+    const group = await teacherService.updateStudentGroup(
+      req.user!.userId,
+      groupId,
+      req.body
+    );
+
+    res.status(200).json({
+      status: "success",
+      message: "Group updated successfully",
+      data: group,
+    });
+  }
+);
+
+export const deleteGroup = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { groupId } = req.params;
+    const result = await teacherService.deleteStudentGroup(
+      req.user!.userId,
+      groupId
+    );
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+    });
+  }
+);

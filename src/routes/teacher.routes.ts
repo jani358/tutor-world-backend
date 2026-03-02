@@ -27,4 +27,9 @@ router.get("/students", teacherController.getStudents);
 
 router.get("/results", teacherController.getResults);
 
+router.get("/groups", teacherController.getGroups);
+router.post("/groups", validate(adminValidation.createStudentGroupSchema), teacherController.createGroup);
+router.put("/groups/:groupId", validate(adminValidation.updateStudentGroupSchema), teacherController.updateGroup);
+router.delete("/groups/:groupId", teacherController.deleteGroup);
+
 export default router;
