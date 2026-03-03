@@ -3,6 +3,7 @@ import Question from "../models/Question.schema";
 import Quiz from "../models/Quiz.schema";
 import QuizAttempt from "../models/QuizAttempt.schema";
 import User, { UserRole } from "../models/User.schema";
+import Class from "../models/Class.schema";
 import StudentGroup from "../models/StudentGroup.schema";
 import { AppError } from "../middlewares/errorHandler";
 
@@ -10,26 +11,31 @@ export const getDashboardStats = async (userId: string) => {
   const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
   if (!teacher) throw new AppError("Teacher not found", 404);
 
+  // Get teacher's assigned class
+  const assignedClass = await Class.findOne({
+    teacher: teacher._id,
+    isDeleted: { $ne: true },
+  }).select("name students");
+
   const [questionsCreated, quizzesCreated] = await Promise.all([
     Question.countDocuments({ createdBy: teacher._id, isActive: true }),
     Quiz.countDocuments({ createdBy: teacher._id, isDeleted: { $ne: true } }),
   ]);
 
+  // Count active students from the assigned class (not from quizzes)
+  const classStudentIds = assignedClass?.students ?? [];
+  const activeStudents = classStudentIds.length > 0
+    ? await User.countDocuments({
+        _id: { $in: classStudentIds },
+        isActive: true,
+        isDeleted: { $ne: true },
+      })
+    : 0;
+
   const teacherQuizzes = await Quiz.find({
     createdBy: teacher._id,
     isDeleted: { $ne: true },
-  }).select("assignedTo");
-
-  const uniqueStudentIds = new Set<string>();
-  teacherQuizzes.forEach((q) => {
-    q.assignedTo.forEach((id) => uniqueStudentIds.add(id.toString()));
-  });
-
-  const activeStudents = await User.countDocuments({
-    _id: { $in: [...uniqueStudentIds] },
-    isActive: true,
-    isDeleted: { $ne: true },
-  });
+  }).select("_id");
 
   const quizIds = teacherQuizzes.map((q) => q._id);
 
@@ -49,6 +55,7 @@ export const getDashboardStats = async (userId: string) => {
     activeStudents,
     totalSubmissions,
     averageScore: Math.round(scoreAgg[0]?.avg || 0),
+    className: assignedClass?.name ?? null,
   };
 };
 
@@ -96,19 +103,17 @@ export const getTeacherStudents = async (
   const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
   if (!teacher) throw new AppError("Teacher not found", 404);
 
-  const teacherQuizzes = await Quiz.find({
-    createdBy: teacher._id,
+  // Get students from teacher's assigned class (not from quiz assignments)
+  const assignedClass = await Class.findOne({
+    teacher: teacher._id,
     isDeleted: { $ne: true },
-  }).select("assignedTo");
+  }).select("name students");
 
-  const uniqueStudentIds = new Set<string>();
-  teacherQuizzes.forEach((q) => {
-    q.assignedTo.forEach((id) => uniqueStudentIds.add(id.toString()));
-  });
+  const classStudentIds = assignedClass?.students ?? [];
 
   const { isActive, page = 1, limit = 20 } = filters;
   const query: any = {
-    _id: { $in: [...uniqueStudentIds] },
+    _id: { $in: classStudentIds },
     isDeleted: { $ne: true },
   };
   if (typeof isActive === "boolean") query.isActive = isActive;
@@ -124,8 +129,15 @@ export const getTeacherStudents = async (
     User.countDocuments(query),
   ]);
 
+  // Enrich each student with className and teacherName
+  const enriched = students.map((s) => ({
+    ...s.toObject(),
+    className: assignedClass?.name ?? "",
+    teacherName: `${teacher.firstName} ${teacher.lastName}`,
+  }));
+
   return {
-    students,
+    students: enriched,
     pagination: { total, page, pages: Math.ceil(total / limit), limit },
   };
 };

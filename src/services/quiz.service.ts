@@ -20,28 +20,34 @@ export const getStudentQuizzes = async (userId: string) => {
     .populate("createdBy", "firstName lastName")
     .sort({ createdAt: -1 });
 
-  const quizzesWithAttempts = await Promise.all(
-    quizzes.map(async (quiz) => {
-      const attemptCount = await QuizAttempt.countDocuments({
-        quizId: quiz._id,
-        studentId: user._id,
-      });
+  const quizObjectIds = quizzes.map((q) => q._id);
 
-      const lastAttempt = await QuizAttempt.findOne({
-        quizId: quiz._id,
-        studentId: user._id,
-        status: AttemptStatus.COMPLETED,
-      })
-        .sort({ completedAt: -1 })
-        .select("score percentage isPassed completedAt");
+  // Batch fetch all attempts for this student across all assigned quizzes (avoids N+1)
+  const allAttempts = await QuizAttempt.find({
+    quizId: { $in: quizObjectIds },
+    studentId: user._id,
+  }).select("quizId score percentage isPassed completedAt status");
 
-      return {
-        ...quiz.toObject(),
-        attemptCount,
-        lastAttempt,
-      };
-    })
-  );
+  // Group attempts by quizId in memory
+  const attemptsByQuiz: Record<string, typeof allAttempts> = {};
+  for (const attempt of allAttempts) {
+    const key = attempt.quizId.toString();
+    if (!attemptsByQuiz[key]) attemptsByQuiz[key] = [];
+    attemptsByQuiz[key].push(attempt);
+  }
+
+  const quizzesWithAttempts = quizzes.map((quiz) => {
+    const attempts = attemptsByQuiz[quiz._id.toString()] || [];
+    const completedAttempts = attempts.filter((a) => a.status === AttemptStatus.COMPLETED);
+    const lastAttempt = completedAttempts.sort(
+      (a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime()
+    )[0] || null;
+    return {
+      ...quiz.toObject(),
+      attemptCount: attempts.length,
+      lastAttempt,
+    };
+  });
 
   return quizzesWithAttempts;
 };

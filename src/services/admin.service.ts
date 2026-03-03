@@ -237,15 +237,14 @@ export const assignQuiz = async (
   quiz.assignedTo.push(...newStudentIds);
   await quiz.save();
 
-  for (const student of students) {
-    if (newStudentIds.some((id) => id.toString() === student._id.toString())) {
-      await sendQuizAssignmentEmail(
-        student.email,
-        student.firstName,
-        quiz.title
-      );
-    }
-  }
+  const newlyAssigned = students.filter((s) =>
+    newStudentIds.some((id) => id.toString() === s._id.toString())
+  );
+  await Promise.all(
+    newlyAssigned.map((student) =>
+      sendQuizAssignmentEmail(student.email, student.firstName, quiz.title).catch(() => {})
+    )
+  );
 
   return {
     message: `Quiz assigned to ${newStudentIds.length} student(s)`,
@@ -321,6 +320,17 @@ export const getQuizResults = async (quizId: string) => {
     },
     results,
   };
+};
+
+// Returns all completed attempts across all quizzes in a single aggregation (no N+1)
+export const getAllResults = async () => {
+  const results = await QuizAttempt.find({ status: "completed" })
+    .populate("studentId", "firstName lastName email userId")
+    .populate("quizId", "title subject grade totalPoints quizId")
+    .sort({ completedAt: -1 })
+    .lean();
+
+  return results;
 };
 
 export const getStudents = async (filters: {
@@ -469,22 +479,32 @@ export const getTeachers = async (filters: {
     }
   }
 
-  const enriched = await Promise.all(
-    teachers.map(async (t) => {
-      const [questionsCreated, quizzesCreated] = await Promise.all([
-        Question.countDocuments({ createdBy: t._id }),
-        Quiz.countDocuments({ createdBy: t._id, isDeleted: { $ne: true } }),
-      ]);
-      const classInfo = teacherClassMap[t._id.toString()];
-      return {
-        ...t.toObject(),
-        questionsCreated,
-        quizzesCreated,
-        assignedClass: classInfo?.assignedClass || "",
-        studentsManaged: classInfo?.studentsManaged || 0,
-      };
-    })
-  );
+  // Batch-count questions and quizzes per teacher using aggregation (avoids N+1)
+  const [questionCounts, quizCounts] = await Promise.all([
+    Question.aggregate([
+      { $match: { createdBy: { $in: teacherIds } } },
+      { $group: { _id: "$createdBy", count: { $sum: 1 } } },
+    ]),
+    Quiz.aggregate([
+      { $match: { createdBy: { $in: teacherIds }, isDeleted: { $ne: true } } },
+      { $group: { _id: "$createdBy", count: { $sum: 1 } } },
+    ]),
+  ]);
+  const questionCountMap: Record<string, number> = {};
+  const quizCountMap: Record<string, number> = {};
+  for (const r of questionCounts) questionCountMap[r._id.toString()] = r.count;
+  for (const r of quizCounts) quizCountMap[r._id.toString()] = r.count;
+
+  const enriched = teachers.map((t) => {
+    const classInfo = teacherClassMap[t._id.toString()];
+    return {
+      ...t.toObject(),
+      questionsCreated: questionCountMap[t._id.toString()] || 0,
+      quizzesCreated: quizCountMap[t._id.toString()] || 0,
+      assignedClass: classInfo?.assignedClass || "",
+      studentsManaged: classInfo?.studentsManaged || 0,
+    };
+  });
 
   return {
     teachers: enriched,
@@ -819,6 +839,19 @@ export const assignTeacherToClass = async (
   });
   if (!teacher) throw new AppError("Teacher not found", 404);
 
+  // Prevent assigning a teacher who is already assigned to a different active class
+  const existingClass = await Class.findOne({
+    teacher: teacher._id,
+    isDeleted: { $ne: true },
+    classId: { $ne: classId },
+  });
+  if (existingClass) {
+    throw new AppError(
+      `This teacher is already assigned to "${existingClass.name}". Remove them from that class first.`,
+      400
+    );
+  }
+
   classDoc.teacher = teacher._id;
   await classDoc.save();
 
@@ -845,6 +878,24 @@ export const assignStudentToClass = async (
     isDeleted: { $ne: true },
   });
   if (!student) throw new AppError("Student not found", 404);
+
+  // Prevent assigning a student who is already in a different class
+  const existingClass = await Class.findOne({
+    students: student._id,
+    isDeleted: { $ne: true },
+    classId: { $ne: classId },
+  });
+  if (existingClass) {
+    throw new AppError(
+      `This student is already assigned to "${existingClass.name}". Remove them from that class first.`,
+      400
+    );
+  }
+
+  // If student is already in this exact class, do nothing (idempotent)
+  if (classDoc.students.some((id) => id.toString() === student._id.toString())) {
+    throw new AppError(`This student is already assigned to "${classDoc.name}".`, 400);
+  }
 
   await Class.updateOne(
     { _id: classDoc._id },

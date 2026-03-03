@@ -160,6 +160,13 @@ export const getQuizResults = asyncHandler(
   }
 );
 
+export const getAllResults = asyncHandler(
+  async (_req: AuthRequest, res: Response) => {
+    const results = await adminService.getAllResults();
+    res.status(200).json({ status: "success", data: results });
+  }
+);
+
 export const getStudents = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const filters = {

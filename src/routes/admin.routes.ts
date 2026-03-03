@@ -25,6 +25,7 @@ router.put("/quizzes/:quizId", validate(adminValidation.updateQuizSchema), admin
 router.delete("/quizzes/:quizId", adminController.deleteQuiz);
 router.post("/quizzes/:quizId/assign", validate(adminValidation.assignQuizSchema), adminController.assignQuiz);
 router.get("/quizzes/:quizId/results", adminController.getQuizResults);
+router.get("/results", adminController.getAllResults);
 
 router.get("/students", adminController.getStudents);
 router.patch("/students/:userId/toggle-status", adminController.toggleStudentStatus);
