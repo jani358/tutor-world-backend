@@ -349,6 +349,20 @@ export const updateClass = asyncHandler(
   }
 );
 
+export const toggleClassStatus = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { classId } = req.params;
+    const { status } = req.body;
+
+    const result = await adminService.toggleClassStatus(classId, status);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+    });
+  }
+);
+
 export const deleteClass = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { classId } = req.params;

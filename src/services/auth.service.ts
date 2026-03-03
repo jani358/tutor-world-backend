@@ -7,7 +7,7 @@ import {
   generateVerificationCode,
   verifyRefreshToken,
 } from "../utils/jwt";
-import { sendVerificationEmail, sendPasswordResetEmail, sendTeacherInviteEmail } from "../utils/email";
+import { sendVerificationEmail, sendPasswordResetEmail, sendTeacherInviteEmail, sendStudentInviteEmail } from "../utils/email";
 import { AppError } from "../middlewares/errorHandler";
 
 export const registerUser = async (data: {
@@ -392,6 +392,56 @@ export const createTeacher = async (data: {
       role: user.role,
     },
     message: "Teacher account created. Login credentials sent to their email.",
+  };
+};
+
+export const createStudent = async (data: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  username?: string;
+  password?: string;
+}): Promise<{ user: Partial<IUser>; message: string }> => {
+  const existingEmail = await User.findOne({ email: data.email });
+  if (existingEmail) {
+    throw new AppError("User with this email already exists", 400);
+  }
+
+  const rawUsername = data.username || data.email.split("@")[0];
+  const baseUsername = rawUsername.toLowerCase().replace(/[^a-z0-9_]/g, "");
+  let username = baseUsername;
+  const collision = await User.findOne({ username });
+  if (collision) {
+    username = `${baseUsername}_${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  const tempPassword = data.password || `Tutor@${Math.floor(100000 + Math.random() * 900000)}`;
+  const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+  const user = await User.create({
+    userId: uuidv4(),
+    username,
+    email: data.email,
+    password: hashedPassword,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    role: UserRole.STUDENT,
+    isEmailVerified: true,
+    isActive: true,
+  });
+
+  await sendStudentInviteEmail(user.email, user.firstName, tempPassword);
+
+  return {
+    user: {
+      userId: user.userId,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+    },
+    message: "Student account created. Login credentials sent to their email.",
   };
 };
 

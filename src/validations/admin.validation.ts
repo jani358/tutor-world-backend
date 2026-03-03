@@ -154,6 +154,7 @@ export const updateClassSchema = Joi.object({
   name: Joi.string().min(2).max(100).optional(),
   description: Joi.string().max(500).optional().allow(""),
   status: Joi.string().valid("active", "inactive").optional(),
+  teacherId: Joi.string().optional().allow("", null),
 });
 
 export const assignTeacherSchema = Joi.object({

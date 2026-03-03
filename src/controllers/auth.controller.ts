@@ -125,6 +125,18 @@ export const createTeacher = asyncHandler(
   }
 );
 
+export const createStudent = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await authService.createStudent(req.body);
+
+    res.status(201).json({
+      status: "success",
+      message: result.message,
+      data: result.user,
+    });
+  }
+);
+
 export const getProfile = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = (req as any).user?.userId;

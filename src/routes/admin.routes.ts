@@ -41,6 +41,7 @@ router.get("/classes", adminController.getClasses);
 router.post("/classes", validate(adminValidation.createClassSchema), adminController.createClass);
 router.put("/classes/:classId", validate(adminValidation.updateClassSchema), adminController.updateClass);
 router.delete("/classes/:classId", adminController.deleteClass);
+router.patch("/classes/:classId/toggle-status", adminController.toggleClassStatus);
 router.patch("/classes/:classId/assign-teacher", validate(adminValidation.assignTeacherSchema), adminController.assignTeacherToClass);
 router.patch("/students/:userId/assign-class", validate(adminValidation.assignStudentClassSchema), adminController.assignStudentToClass);
 

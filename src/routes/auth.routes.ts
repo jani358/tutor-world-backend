@@ -108,6 +108,14 @@ router.post(
   authController.createTeacher
 );
 
+router.post(
+  "/create-student",
+  authenticate,
+  isAdmin,
+  validate(authValidation.createStudentSchema),
+  authController.createStudent
+);
+
 router.post("/logout", authController.logout);
 
 router.post(

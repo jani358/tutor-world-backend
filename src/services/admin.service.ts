@@ -754,7 +754,7 @@ export const createClass = async (data: {
 
 export const updateClass = async (
   classId: string,
-  updates: { name?: string; description?: string; status?: string }
+  updates: { name?: string; description?: string; status?: string; teacherId?: string | null }
 ) => {
   const classDoc = await Class.findOne({ classId, isDeleted: { $ne: true } });
   if (!classDoc) throw new AppError("Class not found", 404);
@@ -763,8 +763,35 @@ export const updateClass = async (
   if (updates.description !== undefined) classDoc.description = updates.description;
   if (updates.status) classDoc.status = updates.status as "active" | "inactive";
 
+  if ("teacherId" in updates) {
+    if (updates.teacherId) {
+      const teacher = await User.findOne({
+        userId: updates.teacherId,
+        role: UserRole.TEACHER,
+        isDeleted: { $ne: true },
+      });
+      if (!teacher) throw new AppError("Teacher not found", 404);
+      classDoc.teacher = teacher._id;
+    } else {
+      classDoc.teacher = undefined;
+    }
+  }
+
   await classDoc.save();
   return classDoc;
+};
+
+export const toggleClassStatus = async (
+  classId: string,
+  status: "active" | "inactive"
+) => {
+  const classDoc = await Class.findOne({ classId, isDeleted: { $ne: true } });
+  if (!classDoc) throw new AppError("Class not found", 404);
+
+  classDoc.status = status;
+  await classDoc.save();
+
+  return { message: `Class ${status === "active" ? "activated" : "deactivated"} successfully` };
 };
 
 export const deleteClass = async (classId: string) => {
