@@ -16,7 +16,6 @@ const COMPANY_NAME = "Tutor World";
 const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support@tutorworld.com";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const BRAND_COLOR = "#44A194";
-const BG_PRIMARY = "#FDFBF7";
 const BG_SECONDARY = "#F4F0E4";
 const FG_PRIMARY = "#1a1f2e";
 const FG_SECONDARY = "#537D96";
@@ -71,14 +70,14 @@ function buildEmail({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <title>${title}</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
     body {
       margin: 0;
       padding: 0;
       font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-      background-color: ${BG_PRIMARY};
+      background-color: #ffffff;
       -webkit-text-size-adjust: 100%;
       -ms-text-size-adjust: 100%;
     }
@@ -87,12 +86,12 @@ function buildEmail({
       mso-table-lspace: 0pt;
       mso-table-rspace: 0pt;
     }
-    .email-wrapper { width: 100%; background-color: ${BG_PRIMARY}; }
-    .email-container { width: 600px; margin: 0 auto; background-color: ${BG_PRIMARY}; }
+    .email-wrapper { width: 100%; background-color: #ffffff; }
+    .email-container { width: 600px; margin: 0 auto; background-color: #ffffff; }
     .content-wrapper { padding: 40px 32px; text-align: center; }
     .logo { margin-bottom: 40px; }
     .logo img {
-      height: 48px;
+      height: 72px;
       width: auto;
     }
     .greeting {
@@ -193,17 +192,17 @@ function buildEmail({
   </style>
 </head>
 <body>
-  <div class="email-wrapper">
+  <div class="email-wrapper" style="font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
     <div class="email-container">
       <div class="content-wrapper">
 
         <div class="logo">
-          <img src="https://res.cloudinary.com/dtn5lbqrp/image/upload/v1772449677/Tutor-Logo_mbg2qj.gif" alt="${COMPANY_NAME}" style="height:48px;width:auto;" />
+          <img src="https://res.cloudinary.com/dtn5lbqrp/image/upload/v1772449677/Tutor-Logo_mbg2qj.gif" alt="${COMPANY_NAME}" style="height:72px;width:auto;" />
         </div>
 
-        <h1 class="greeting">Hi ${firstName},</h1>
+        <h1 class="greeting" style="font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Hi ${firstName},</h1>
 
-        <p class="description">${description}</p>
+        <p class="description" style="font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">${description}</p>
 
         ${codeSection}
 
@@ -326,6 +325,50 @@ export const sendTeacherInviteEmail = async (
   } catch (error) {
     logger.error(`Failed to send teacher invite email to ${email}:`, error);
     throw new Error("Failed to send teacher invite email");
+  }
+};
+
+export const sendStudentInviteEmail = async (
+  email: string,
+  firstName: string,
+  temporaryPassword: string
+): Promise<void> => {
+  try {
+    const loginUrl = `${FRONTEND_URL}/auth`;
+
+    const credsHtml = `
+      <div class="creds-box">
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Temporary Password:</strong> ${temporaryPassword}</p>
+      </div>
+      <p style="font-size:15px;color:${FG_MUTED};margin:0 0 32px 0;">
+        Please log in and change your password immediately.
+      </p>
+    `;
+
+    const html = buildEmail({
+      firstName,
+      title: "Welcome to Tutor World",
+      description:
+        "An admin has created a student account for you. Here are your login credentials:",
+      customSection: credsHtml,
+      warningText: undefined,
+      footerNote:
+        "You received this email because a Tutor World student account was created for you.",
+      ctaLabel: "Login to Tutor World",
+      ctaUrl: loginUrl,
+    });
+
+    await transporter.sendMail({
+      from: FROM,
+      to: email,
+      subject: "Welcome to Tutor World — Your Student Account",
+      html,
+    });
+    logger.info(`Student invite email sent to ${email}`);
+  } catch (error) {
+    logger.error(`Failed to send student invite email to ${email}:`, error);
+    throw new Error("Failed to send student invite email");
   }
 };
 

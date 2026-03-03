@@ -1,4 +1,5 @@
 import express, { Application } from "express";
+import compression from "compression";
 import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
@@ -18,6 +19,7 @@ const app: Application = express();
 const port = process.env.PORT || 5001;
 
 app.use(helmet());
+app.use(compression());
 app.use(mongoSanitize());
 app.use(hpp());
 

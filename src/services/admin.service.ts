@@ -3,6 +3,9 @@ import Question, { IQuestion } from "../models/Question.schema";
 import Quiz, { IQuiz } from "../models/Quiz.schema";
 import User, { UserRole } from "../models/User.schema";
 import QuizAttempt from "../models/QuizAttempt.schema";
+import Class from "../models/Class.schema";
+import Subject from "../models/Subject.schema";
+import Notification from "../models/Notification.schema";
 import { AppError } from "../middlewares/errorHandler";
 import { sendQuizAssignmentEmail } from "../utils/email";
 import csv from "csv-parser";
@@ -271,16 +274,24 @@ export const getQuizzes = async (filters: {
 
   const [quizzes, total] = await Promise.all([
     Quiz.find(query)
-      .populate("createdBy", "firstName lastName")
-      .select("-questions")
+      .populate("createdBy", "firstName lastName role")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
     Quiz.countDocuments(query),
   ]);
 
+  const enriched = quizzes.map((q) => {
+    const obj = q.toObject();
+    return {
+      ...obj,
+      questionCount: obj.questions?.length || obj.numberOfQuestions || 0,
+      questions: undefined,
+    };
+  });
+
   return {
-    quizzes,
+    quizzes: enriched,
     pagination: {
       total,
       page,
@@ -336,8 +347,38 @@ export const getStudents = async (filters: {
     User.countDocuments(query),
   ]);
 
+  const studentIds = students.map((s) => s._id);
+  const classes = await Class.find({
+    students: { $in: studentIds },
+    isDeleted: { $ne: true },
+  })
+    .populate("teacher", "firstName lastName")
+    .select("name students teacher");
+
+  const studentClassMap: Record<string, { className: string; teacherName: string }> = {};
+  for (const cls of classes) {
+    const teacher = cls.teacher as any;
+    const teacherName = teacher ? `${teacher.firstName} ${teacher.lastName}` : "";
+    for (const sid of cls.students) {
+      studentClassMap[sid.toString()] = {
+        className: cls.name,
+        teacherName,
+      };
+    }
+  }
+
+  const enriched = students.map((s) => {
+    const obj = s.toObject();
+    const classInfo = studentClassMap[s._id.toString()];
+    return {
+      ...obj,
+      className: classInfo?.className || "",
+      teacherName: classInfo?.teacherName || "",
+    };
+  });
+
   return {
-    students,
+    students: enriched,
     pagination: {
       total,
       page,
@@ -411,16 +452,36 @@ export const getTeachers = async (filters: {
     User.countDocuments(query),
   ]);
 
+  const teacherIds = teachers.map((t) => t._id);
+  const teacherClasses = await Class.find({
+    teacher: { $in: teacherIds },
+    isDeleted: { $ne: true },
+  }).select("name teacher students");
+
+  const teacherClassMap: Record<string, { assignedClass: string; studentsManaged: number }> = {};
+  for (const cls of teacherClasses) {
+    const tid = cls.teacher?.toString();
+    if (tid) {
+      teacherClassMap[tid] = {
+        assignedClass: cls.name,
+        studentsManaged: cls.students?.length || 0,
+      };
+    }
+  }
+
   const enriched = await Promise.all(
     teachers.map(async (t) => {
       const [questionsCreated, quizzesCreated] = await Promise.all([
         Question.countDocuments({ createdBy: t._id }),
         Quiz.countDocuments({ createdBy: t._id, isDeleted: { $ne: true } }),
       ]);
+      const classInfo = teacherClassMap[t._id.toString()];
       return {
         ...t.toObject(),
         questionsCreated,
         quizzesCreated,
+        assignedClass: classInfo?.assignedClass || "",
+        studentsManaged: classInfo?.studentsManaged || 0,
       };
     })
   );
@@ -498,6 +559,7 @@ export const getDashboardStats = async () => {
     totalQuestions,
     totalQuizzes,
     totalSubmissions,
+    totalClasses,
     scoreAgg,
     newUsersThisMonth,
   ] = await Promise.all([
@@ -506,6 +568,7 @@ export const getDashboardStats = async () => {
     Question.countDocuments({ isActive: true }),
     Quiz.countDocuments({ isDeleted: { $ne: true } }),
     QuizAttempt.countDocuments({ status: "completed" }),
+    Class.countDocuments({ isDeleted: { $ne: true } }),
     QuizAttempt.aggregate([
       { $match: { status: "completed" } },
       { $group: { _id: null, avg: { $avg: "$percentage" } } },
@@ -518,16 +581,21 @@ export const getDashboardStats = async () => {
     }),
   ]);
 
-  const activeStudents = await User.countDocuments({
-    role: UserRole.STUDENT,
-    isActive: true,
-    isDeleted: { $ne: true },
-  });
-  const activeTeachers = await User.countDocuments({
-    role: UserRole.TEACHER,
-    isActive: true,
-    isDeleted: { $ne: true },
-  });
+  const [activeStudents, activeTeachers] = await Promise.all([
+    User.countDocuments({
+      role: UserRole.STUDENT,
+      isActive: true,
+      isDeleted: { $ne: true },
+    }),
+    User.countDocuments({
+      role: UserRole.TEACHER,
+      isActive: true,
+      isDeleted: { $ne: true },
+    }),
+  ]);
+
+  const activeUsers = activeStudents + activeTeachers;
+  const inactiveUsers = (totalStudents + totalTeachers) - activeUsers;
 
   return {
     totalStudents,
@@ -535,8 +603,10 @@ export const getDashboardStats = async () => {
     totalQuestions,
     totalQuizzes,
     totalSubmissions,
+    totalClasses,
     averageScore: Math.round(scoreAgg[0]?.avg || 0),
-    activeUsers: activeStudents + activeTeachers,
+    activeUsers,
+    inactiveUsers,
     newUsersThisMonth,
   };
 };
@@ -618,4 +688,338 @@ export const importStudentsFromCSV = async (csvBuffer: Buffer) => {
         reject(error);
       });
   });
+};
+
+export const getClasses = async (filters: {
+  page?: number;
+  limit?: number;
+}) => {
+  const { page = 1, limit = 20 } = filters;
+  const query = { isDeleted: { $ne: true } };
+  const skip = (page - 1) * limit;
+
+  const [classes, total] = await Promise.all([
+    Class.find(query)
+      .populate("teacher", "firstName lastName email userId")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Class.countDocuments(query),
+  ]);
+
+  const enriched = classes.map((c) => {
+    const obj = c.toObject();
+    return {
+      ...obj,
+      studentCount: obj.students?.length || 0,
+    };
+  });
+
+  return {
+    classes: enriched,
+    pagination: {
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      limit,
+    },
+  };
+};
+
+export const createClass = async (data: {
+  name: string;
+  description?: string;
+  teacherId?: string;
+}) => {
+  let teacherObjectId;
+  if (data.teacherId) {
+    const teacher = await User.findOne({
+      userId: data.teacherId,
+      role: UserRole.TEACHER,
+      isDeleted: { $ne: true },
+    });
+    if (!teacher) throw new AppError("Teacher not found", 404);
+    teacherObjectId = teacher._id;
+  }
+
+  const classDoc = await Class.create({
+    classId: uuidv4(),
+    name: data.name,
+    description: data.description || "",
+    teacher: teacherObjectId,
+  });
+
+  return classDoc;
+};
+
+export const updateClass = async (
+  classId: string,
+  updates: { name?: string; description?: string; status?: string; teacherId?: string | null }
+) => {
+  const classDoc = await Class.findOne({ classId, isDeleted: { $ne: true } });
+  if (!classDoc) throw new AppError("Class not found", 404);
+
+  if (updates.name) classDoc.name = updates.name;
+  if (updates.description !== undefined) classDoc.description = updates.description;
+  if (updates.status) classDoc.status = updates.status as "active" | "inactive";
+
+  if ("teacherId" in updates) {
+    if (updates.teacherId) {
+      const teacher = await User.findOne({
+        userId: updates.teacherId,
+        role: UserRole.TEACHER,
+        isDeleted: { $ne: true },
+      });
+      if (!teacher) throw new AppError("Teacher not found", 404);
+      classDoc.teacher = teacher._id;
+    } else {
+      classDoc.teacher = undefined;
+    }
+  }
+
+  await classDoc.save();
+  return classDoc;
+};
+
+export const toggleClassStatus = async (
+  classId: string,
+  status: "active" | "inactive"
+) => {
+  const classDoc = await Class.findOne({ classId, isDeleted: { $ne: true } });
+  if (!classDoc) throw new AppError("Class not found", 404);
+
+  classDoc.status = status;
+  await classDoc.save();
+
+  return { message: `Class ${status === "active" ? "activated" : "deactivated"} successfully` };
+};
+
+export const deleteClass = async (classId: string) => {
+  const classDoc = await Class.findOne({ classId, isDeleted: { $ne: true } });
+  if (!classDoc) throw new AppError("Class not found", 404);
+
+  classDoc.isDeleted = true;
+  classDoc.deletedAt = new Date();
+  await classDoc.save();
+
+  return { message: "Class deleted successfully" };
+};
+
+export const assignTeacherToClass = async (
+  classId: string,
+  teacherId: string
+) => {
+  const classDoc = await Class.findOne({ classId, isDeleted: { $ne: true } });
+  if (!classDoc) throw new AppError("Class not found", 404);
+
+  const teacher = await User.findOne({
+    userId: teacherId,
+    role: UserRole.TEACHER,
+    isDeleted: { $ne: true },
+  });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  classDoc.teacher = teacher._id;
+  await classDoc.save();
+
+  return {
+    message: "Teacher assigned to class successfully",
+    teacher: {
+      userId: teacher.userId,
+      firstName: teacher.firstName,
+      lastName: teacher.lastName,
+    },
+  };
+};
+
+export const assignStudentToClass = async (
+  studentUserId: string,
+  classId: string
+) => {
+  const classDoc = await Class.findOne({ classId, isDeleted: { $ne: true } });
+  if (!classDoc) throw new AppError("Class not found", 404);
+
+  const student = await User.findOne({
+    userId: studentUserId,
+    role: UserRole.STUDENT,
+    isDeleted: { $ne: true },
+  });
+  if (!student) throw new AppError("Student not found", 404);
+
+  await Class.updateOne(
+    { _id: classDoc._id },
+    { $addToSet: { students: student._id } }
+  );
+
+  return { message: "Student assigned to class successfully" };
+};
+
+export const getSubjects = async (filters: {
+  page?: number;
+  limit?: number;
+}) => {
+  const { page = 1, limit = 20 } = filters;
+  const query = { isDeleted: { $ne: true } };
+  const skip = (page - 1) * limit;
+
+  const [subjects, total] = await Promise.all([
+    Subject.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Subject.countDocuments(query),
+  ]);
+
+  return {
+    subjects,
+    pagination: {
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      limit,
+    },
+  };
+};
+
+export const createSubject = async (data: {
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+}) => {
+  const slug = data.name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+  const existing = await Subject.findOne({
+    slug,
+    isDeleted: { $ne: true },
+  });
+  if (existing) throw new AppError("A subject with this name already exists", 409);
+
+  const subject = await Subject.create({
+    subjectId: uuidv4(),
+    name: data.name,
+    slug,
+    description: data.description || "",
+    icon: data.icon || "BookOpen",
+    color: data.color || "#44A194",
+  });
+
+  return subject;
+};
+
+export const toggleSubjectStatus = async (
+  subjectId: string,
+  status: "active" | "inactive"
+) => {
+  const subject = await Subject.findOne({
+    subjectId,
+    isDeleted: { $ne: true },
+  });
+  if (!subject) throw new AppError("Subject not found", 404);
+
+  subject.status = status;
+  await subject.save();
+
+  return {
+    message: `Subject ${status === "active" ? "activated" : "deactivated"} successfully`,
+  };
+};
+
+export const deleteSubject = async (subjectId: string) => {
+  const subject = await Subject.findOne({
+    subjectId,
+    isDeleted: { $ne: true },
+  });
+  if (!subject) throw new AppError("Subject not found", 404);
+
+  subject.isDeleted = true;
+  subject.deletedAt = new Date();
+  await subject.save();
+
+  return { message: "Subject deleted successfully" };
+};
+
+export const getNotifications = async (filters: {
+  page?: number;
+  limit?: number;
+}) => {
+  const { page = 1, limit = 20 } = filters;
+  const query = { isDeleted: { $ne: true } };
+  const skip = (page - 1) * limit;
+
+  const [notifications, total] = await Promise.all([
+    Notification.find(query)
+      .populate("createdBy", "firstName lastName")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Notification.countDocuments(query),
+  ]);
+
+  return {
+    notifications,
+    pagination: {
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      limit,
+    },
+  };
+};
+
+export const createNotification = async (
+  data: {
+    title: string;
+    message: string;
+    type?: string;
+    target?: string;
+    expiresAt?: Date;
+  },
+  userId: string
+) => {
+  const user = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!user) throw new AppError("User not found", 404);
+
+  const notification = await Notification.create({
+    notificationId: uuidv4(),
+    title: data.title,
+    message: data.message,
+    type: data.type || "info",
+    target: data.target || "all",
+    expiresAt: data.expiresAt,
+    createdBy: user._id,
+  });
+
+  return notification;
+};
+
+export const deleteNotification = async (notificationId: string) => {
+  const notification = await Notification.findOne({
+    notificationId,
+    isDeleted: { $ne: true },
+  });
+  if (!notification) throw new AppError("Notification not found", 404);
+
+  notification.isDeleted = true;
+  notification.deletedAt = new Date();
+  await notification.save();
+
+  return { message: "Notification deleted successfully" };
+};
+
+export const markNotificationRead = async (notificationId: string) => {
+  const notification = await Notification.findOne({
+    notificationId,
+    isDeleted: { $ne: true },
+  });
+  if (!notification) throw new AppError("Notification not found", 404);
+
+  notification.isRead = true;
+  await notification.save();
+
+  return { message: "Notification marked as read" };
 };

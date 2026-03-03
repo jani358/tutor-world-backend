@@ -1,9 +1,5 @@
 import mongoose from "mongoose";
-import dns from "node:dns";
 import { logger } from "./utils/logger";
-
-// Use Google DNS to resolve MongoDB Atlas SRV records
-dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const mongooseConnectStart = Date.now();
 

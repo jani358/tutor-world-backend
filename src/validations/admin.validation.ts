@@ -139,3 +139,65 @@ export const updateStudentGroupSchema = Joi.object({
     .valid("primary", "success", "warning", "accent", "info", "error")
     .optional(),
 });
+
+export const createClassSchema = Joi.object({
+  name: Joi.string().min(2).max(100).required().messages({
+    "string.min": "Class name must be at least 2 characters",
+    "string.max": "Class name must not exceed 100 characters",
+    "any.required": "Class name is required",
+  }),
+  description: Joi.string().max(500).optional().allow(""),
+  teacherId: Joi.string().optional(),
+});
+
+export const updateClassSchema = Joi.object({
+  name: Joi.string().min(2).max(100).optional(),
+  description: Joi.string().max(500).optional().allow(""),
+  status: Joi.string().valid("active", "inactive").optional(),
+  teacherId: Joi.string().optional().allow("", null),
+});
+
+export const assignTeacherSchema = Joi.object({
+  teacherId: Joi.string().required().messages({
+    "any.required": "Teacher ID is required",
+  }),
+});
+
+export const assignStudentClassSchema = Joi.object({
+  classId: Joi.string().required().messages({
+    "any.required": "Class ID is required",
+  }),
+});
+
+export const createSubjectSchema = Joi.object({
+  name: Joi.string().min(2).max(100).required().messages({
+    "string.min": "Subject name must be at least 2 characters",
+    "string.max": "Subject name must not exceed 100 characters",
+    "any.required": "Subject name is required",
+  }),
+  description: Joi.string().max(500).optional().allow(""),
+  icon: Joi.string().max(50).optional(),
+  color: Joi.string().max(20).optional(),
+});
+
+export const updateSubjectSchema = Joi.object({
+  name: Joi.string().min(2).max(100).optional(),
+  description: Joi.string().max(500).optional().allow(""),
+  icon: Joi.string().max(50).optional(),
+  color: Joi.string().max(20).optional(),
+  status: Joi.string().valid("active", "inactive").optional(),
+});
+
+export const createNotificationSchema = Joi.object({
+  title: Joi.string().min(3).max(200).required().messages({
+    "string.min": "Title must be at least 3 characters",
+    "any.required": "Notification title is required",
+  }),
+  message: Joi.string().min(5).max(2000).required().messages({
+    "string.min": "Message must be at least 5 characters",
+    "any.required": "Notification message is required",
+  }),
+  type: Joi.string().valid("info", "warning", "success", "error").optional(),
+  target: Joi.string().valid("all", "students", "teachers", "admins").optional(),
+  expiresAt: Joi.date().optional(),
+});

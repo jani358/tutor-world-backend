@@ -130,5 +130,7 @@ const userSchema = new Schema<IUser>(
 );
 
 userSchema.index({ role: 1 });
+userSchema.index({ role: 1, isActive: 1, isDeleted: 1 });
+userSchema.index({ googleId: 1 }, { sparse: true });
 
 export default mongoose.model<IUser>("User", userSchema);

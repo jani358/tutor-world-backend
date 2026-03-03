@@ -306,3 +306,211 @@ export const getAuditLogs = asyncHandler(
     });
   }
 );
+
+export const getClasses = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const filters = {
+      page: parseInt(req.query.page as string) || 1,
+      limit: parseInt(req.query.limit as string) || 20,
+    };
+
+    const result = await adminService.getClasses(filters);
+
+    res.status(200).json({
+      status: "success",
+      data: result.classes,
+      pagination: result.pagination,
+    });
+  }
+);
+
+export const createClass = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const classDoc = await adminService.createClass(req.body);
+
+    res.status(201).json({
+      status: "success",
+      message: "Class created successfully",
+      data: classDoc,
+    });
+  }
+);
+
+export const updateClass = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { classId } = req.params;
+    const classDoc = await adminService.updateClass(classId, req.body);
+
+    res.status(200).json({
+      status: "success",
+      message: "Class updated successfully",
+      data: classDoc,
+    });
+  }
+);
+
+export const toggleClassStatus = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { classId } = req.params;
+    const { status } = req.body;
+
+    const result = await adminService.toggleClassStatus(classId, status);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+    });
+  }
+);
+
+export const deleteClass = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { classId } = req.params;
+    const result = await adminService.deleteClass(classId);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+    });
+  }
+);
+
+export const assignTeacherToClass = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { classId } = req.params;
+    const { teacherId } = req.body;
+
+    const result = await adminService.assignTeacherToClass(classId, teacherId);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+      data: result.teacher,
+    });
+  }
+);
+
+export const assignStudentToClass = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { userId } = req.params;
+    const { classId } = req.body;
+
+    const result = await adminService.assignStudentToClass(userId, classId);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+    });
+  }
+);
+
+export const getSubjects = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const filters = {
+      page: parseInt(req.query.page as string) || 1,
+      limit: parseInt(req.query.limit as string) || 20,
+    };
+
+    const result = await adminService.getSubjects(filters);
+
+    res.status(200).json({
+      status: "success",
+      data: result.subjects,
+      pagination: result.pagination,
+    });
+  }
+);
+
+export const createSubject = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const subject = await adminService.createSubject(req.body);
+
+    res.status(201).json({
+      status: "success",
+      message: "Subject created successfully",
+      data: subject,
+    });
+  }
+);
+
+export const toggleSubjectStatus = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { subjectId } = req.params;
+    const { status } = req.body;
+
+    const result = await adminService.toggleSubjectStatus(subjectId, status);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+    });
+  }
+);
+
+export const deleteSubject = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { subjectId } = req.params;
+    const result = await adminService.deleteSubject(subjectId);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+    });
+  }
+);
+
+export const getNotifications = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const filters = {
+      page: parseInt(req.query.page as string) || 1,
+      limit: parseInt(req.query.limit as string) || 20,
+    };
+
+    const result = await adminService.getNotifications(filters);
+
+    res.status(200).json({
+      status: "success",
+      data: result.notifications,
+      pagination: result.pagination,
+    });
+  }
+);
+
+export const createNotification = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const notification = await adminService.createNotification(
+      req.body,
+      req.user!.userId
+    );
+
+    res.status(201).json({
+      status: "success",
+      message: "Notification created successfully",
+      data: notification,
+    });
+  }
+);
+
+export const deleteNotification = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { notificationId } = req.params;
+    const result = await adminService.deleteNotification(notificationId);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+    });
+  }
+);
+
+export const markNotificationRead = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { notificationId } = req.params;
+    const result = await adminService.markNotificationRead(notificationId);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+    });
+  }
+);
