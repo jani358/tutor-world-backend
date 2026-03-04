@@ -290,7 +290,7 @@ export const sendTeacherInviteEmail = async (
   temporaryPassword: string
 ): Promise<void> => {
   try {
-    const loginUrl = `${FRONTEND_URL}/auth`;
+    const createPasswordUrl = `${FRONTEND_URL}/auth?mode=create-password&email=${encodeURIComponent(email)}`;
 
     const credsHtml = `
       <div class="creds-box">
@@ -298,7 +298,7 @@ export const sendTeacherInviteEmail = async (
         <p><strong>Temporary Password:</strong> ${temporaryPassword}</p>
       </div>
       <p style="font-size:15px;color:${FG_MUTED};margin:0 0 32px 0;">
-        Please log in and change your password immediately.
+        Please use the button below to create your own password.
       </p>
     `;
 
@@ -311,8 +311,8 @@ export const sendTeacherInviteEmail = async (
       warningText: undefined,
       footerNote:
         "You received this email because a Tutor World teacher account was created for you.",
-      ctaLabel: "Login to Tutor World",
-      ctaUrl: loginUrl,
+      ctaLabel: "Create Your Password",
+      ctaUrl: createPasswordUrl,
     });
 
     await transporter.sendMail({
@@ -334,7 +334,7 @@ export const sendStudentInviteEmail = async (
   temporaryPassword: string
 ): Promise<void> => {
   try {
-    const loginUrl = `${FRONTEND_URL}/auth`;
+    const createPasswordUrl = `${FRONTEND_URL}/auth?mode=create-password&email=${encodeURIComponent(email)}`;
 
     const credsHtml = `
       <div class="creds-box">
@@ -342,7 +342,7 @@ export const sendStudentInviteEmail = async (
         <p><strong>Temporary Password:</strong> ${temporaryPassword}</p>
       </div>
       <p style="font-size:15px;color:${FG_MUTED};margin:0 0 32px 0;">
-        Please log in and change your password immediately.
+        Please use the button below to create your own password.
       </p>
     `;
 
@@ -355,8 +355,8 @@ export const sendStudentInviteEmail = async (
       warningText: undefined,
       footerNote:
         "You received this email because a Tutor World student account was created for you.",
-      ctaLabel: "Login to Tutor World",
-      ctaUrl: loginUrl,
+      ctaLabel: "Create Your Password",
+      ctaUrl: createPasswordUrl,
     });
 
     await transporter.sendMail({

@@ -113,6 +113,19 @@ export const changePassword = asyncHandler(
   }
 );
 
+export const createPassword = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { email, temporaryPassword, newPassword } = req.body;
+
+    const result = await authService.createPassword(email, temporaryPassword, newPassword);
+
+    res.status(200).json({
+      status: "success",
+      message: result.message,
+    });
+  }
+);
+
 export const createTeacher = asyncHandler(
   async (req: Request, res: Response) => {
     const result = await authService.createTeacher(req.body);
