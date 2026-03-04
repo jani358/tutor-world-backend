@@ -138,14 +138,23 @@ export const createQuiz = async (
   const user = await User.findOne({ userId, isDeleted: { $ne: true } });
   if (!user) throw new AppError("User not found", 404);
 
-  const questions = await Question.find({
-    _id: { $in: quizData.questions },
-  });
+  // Frontend sends UUID questionId strings; resolve them to ObjectIds
+  const rawIds = (quizData.questions || []) as any[];
+  const isObjectId = rawIds.length > 0 && /^[a-f\d]{24}$/i.test(String(rawIds[0]));
+
+  const questions = await Question.find(
+    isObjectId ? { _id: { $in: rawIds } } : { questionId: { $in: rawIds } }
+  );
+
+  if (questions.length === 0) {
+    throw new AppError("No valid questions found", 400);
+  }
 
   const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
 
   const quiz = await Quiz.create({
     ...quizData,
+    questions: questions.map((q) => q._id),
     quizId: uuidv4(),
     totalPoints,
     createdBy: user._id,
@@ -173,9 +182,12 @@ export const updateQuiz = async (
   }
 
   if (updates.questions) {
-    const questions = await Question.find({
-      _id: { $in: updates.questions },
-    });
+    const rawIds = updates.questions as any[];
+    const isObjectId = rawIds.length > 0 && /^[a-f\d]{24}$/i.test(String(rawIds[0]));
+    const questions = await Question.find(
+      isObjectId ? { _id: { $in: rawIds } } : { questionId: { $in: rawIds } }
+    );
+    updates.questions = questions.map((q) => q._id);
     updates.totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
   }
 
