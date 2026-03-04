@@ -1,9 +1,44 @@
 import { v4 as uuidv4 } from "uuid";
 import Quiz, { QuizStatus } from "../models/Quiz.schema";
 import QuizAttempt, { AttemptStatus } from "../models/QuizAttempt.schema";
+import Question from "../models/Question.schema";
 import User from "../models/User.schema";
 import { AppError } from "../middlewares/errorHandler";
 import mongoose from "mongoose";
+
+/**
+ * Resolve quiz questions — handles both ObjectId refs and UUID strings.
+ * Quizzes created before the UUID→ObjectId fix may have UUID strings in the questions array.
+ */
+const resolveQuizQuestions = async (quiz: any) => {
+  const rawIds = (quiz.questions || []) as any[];
+  if (rawIds.length === 0) return [];
+
+  // Check if first entry is a populated document (has _id and title)
+  if (rawIds[0]?.title) return rawIds;
+
+  // Check if entries are valid ObjectIds or UUID strings
+  const firstId = String(rawIds[0]);
+  const isObjectId = /^[a-f\d]{24}$/i.test(firstId);
+
+  if (isObjectId) {
+    // Normal ObjectId refs — query by _id
+    return Question.find({ _id: { $in: rawIds } });
+  }
+
+  // UUID strings — query by questionId field
+  const questions = await Question.find({ questionId: { $in: rawIds.map(String) } });
+
+  // Also fix the quiz document so future lookups work with populate
+  if (questions.length > 0) {
+    await Quiz.updateOne(
+      { _id: quiz._id },
+      { $set: { questions: questions.map((q) => q._id) } }
+    );
+  }
+
+  return questions;
+};
 
 export const getStudentQuizzes = async (userId: string) => {
   const user = await User.findOne({ userId });
@@ -58,7 +93,7 @@ export const startQuiz = async (quizId: string, userId: string) => {
     throw new AppError("User not found", 404);
   }
 
-  const quiz = await Quiz.findOne({ quizId, isDeleted: { $ne: true } }).populate("questions");
+  const quiz = await Quiz.findOne({ quizId, isDeleted: { $ne: true } });
   if (!quiz) {
     throw new AppError("Quiz not found", 404);
   }
@@ -74,9 +109,17 @@ export const startQuiz = async (quizId: string, userId: string) => {
   if (quiz.startDate && new Date() < quiz.startDate) {
     throw new AppError("This quiz has not started yet", 400);
   }
-  if (quiz.endDate && new Date() > quiz.endDate) {
-    throw new AppError("This quiz has ended", 400);
+  if (quiz.endDate) {
+    // Allow the entire due date day — only block after end of day
+    const endOfDay = new Date(quiz.endDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    if (new Date() > endOfDay) {
+      throw new AppError("This quiz has ended", 400);
+    }
   }
+
+  // Resolve questions (handles both ObjectId refs and UUID strings)
+  const resolvedQuestions = await resolveQuizQuestions(quiz);
 
   const incompleteAttempt = await QuizAttempt.findOne({
     quizId: quiz._id,
@@ -89,19 +132,22 @@ export const startQuiz = async (quizId: string, userId: string) => {
       attempt: incompleteAttempt,
       quiz: {
         ...quiz.toObject(),
-        questions: quiz.questions.map((q: any) => ({
-          ...q.toObject(),
-          correctAnswer: undefined,
-          options: q.options.map((opt: any) => ({
-            text: opt.text,
-            isCorrect: undefined,
-          })),
-        })),
+        questions: resolvedQuestions.map((q: any) => {
+          const qObj = q.toObject ? q.toObject() : q;
+          return {
+            ...qObj,
+            correctAnswer: undefined,
+            options: (qObj.options || []).map((opt: any) => ({
+              text: opt.text,
+              isCorrect: undefined,
+            })),
+          };
+        }),
       },
     };
   }
 
-  let selectedQuestions = quiz.questions as any[];
+  let selectedQuestions = resolvedQuestions as any[];
   if (quiz.isRandomized && quiz.numberOfQuestions) {
     selectedQuestions = selectedQuestions
       .sort(() => Math.random() - 0.5)
@@ -120,21 +166,24 @@ export const startQuiz = async (quizId: string, userId: string) => {
     startedAt: new Date(),
   });
 
-  const sanitizedQuestions = selectedQuestions.map((q) => ({
-    _id: q._id,
-    questionId: q.questionId,
-    title: q.title,
-    description: q.description,
-    questionType: q.questionType,
-    difficulty: q.difficulty,
-    subject: q.subject,
-    grade: q.grade,
-    options: q.options.map((opt: any) => ({
-      text: opt.text,
-    })),
-    points: q.points,
-    imageUrl: q.imageUrl,
-  }));
+  const sanitizedQuestions = selectedQuestions.map((q: any) => {
+    const qObj = q.toObject ? q.toObject() : q;
+    return {
+      _id: qObj._id,
+      questionId: qObj.questionId,
+      title: qObj.title,
+      description: qObj.description,
+      questionType: qObj.questionType,
+      difficulty: qObj.difficulty,
+      subject: qObj.subject,
+      grade: qObj.grade,
+      options: (qObj.options || []).map((opt: any) => ({
+        text: opt.text,
+      })),
+      points: qObj.points,
+      imageUrl: qObj.imageUrl,
+    };
+  });
 
   return {
     attempt,
@@ -168,10 +217,13 @@ export const submitQuiz = async (
     throw new AppError("Quiz already submitted", 400);
   }
 
-  const quiz = await Quiz.findById(attempt.quizId).populate("questions");
+  const quiz = await Quiz.findById(attempt.quizId);
   if (!quiz) {
     throw new AppError("Quiz not found", 404);
   }
+
+  // Resolve questions (handles both ObjectId refs and UUID strings)
+  const resolvedQuestions = await resolveQuizQuestions(quiz);
 
   let isLateSubmission = false;
   if (quiz.timeLimit) {
@@ -193,7 +245,7 @@ export const submitQuiz = async (
 
   let totalScore = 0;
   const gradedAnswers = answers.map((answer) => {
-    const question: any = quiz.questions.find(
+    const question: any = resolvedQuestions.find(
       (q: any) => q.questionId === answer.questionId
     );
 
