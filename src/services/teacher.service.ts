@@ -22,11 +22,12 @@ export const getDashboardStats = async (userId: string) => {
     Quiz.countDocuments({ createdBy: teacher._id, isDeleted: { $ne: true } }),
   ]);
 
-  // Count active students from the assigned class (not from quizzes)
+  // Count active students from the assigned class
   const classStudentIds = assignedClass?.students ?? [];
   const activeStudents = classStudentIds.length > 0
     ? await User.countDocuments({
         _id: { $in: classStudentIds },
+        role: UserRole.STUDENT,
         isActive: true,
         isDeleted: { $ne: true },
       })
@@ -103,17 +104,23 @@ export const getTeacherStudents = async (
   const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
   if (!teacher) throw new AppError("Teacher not found", 404);
 
-  // Get students from teacher's assigned class (not from quiz assignments)
+  // Get teacher's assigned class with populated students
   const assignedClass = await Class.findOne({
     teacher: teacher._id,
     isDeleted: { $ne: true },
   }).select("name students");
 
-  const classStudentIds = assignedClass?.students ?? [];
+  if (!assignedClass || assignedClass.students.length === 0) {
+    return {
+      students: [],
+      pagination: { total: 0, page: 1, pages: 0, limit: filters.limit || 20 },
+    };
+  }
 
   const { isActive, page = 1, limit = 20 } = filters;
   const query: any = {
-    _id: { $in: classStudentIds },
+    _id: { $in: assignedClass.students },
+    role: UserRole.STUDENT,
     isDeleted: { $ne: true },
   };
   if (typeof isActive === "boolean") query.isActive = isActive;
@@ -132,7 +139,7 @@ export const getTeacherStudents = async (
   // Enrich each student with className and teacherName
   const enriched = students.map((s) => ({
     ...s.toObject(),
-    className: assignedClass?.name ?? "",
+    className: assignedClass.name,
     teacherName: `${teacher.firstName} ${teacher.lastName}`,
   }));
 
