@@ -13,6 +13,7 @@ export interface IQuiz extends Document {
   description?: string;
   subject: string;
   grade: string;
+  difficulty?: string;
   timeLimit?: number;
   totalPoints: number;
   passingScore: number;
@@ -59,6 +60,11 @@ const quizSchema = new Schema<IQuiz>(
       required: true,
       trim: true,
       index: true,
+    },
+    difficulty: {
+      type: String,
+      enum: ["easy", "medium", "hard"],
+      trim: true,
     },
     timeLimit: {
       type: Number,

@@ -152,11 +152,20 @@ export const createQuiz = async (
 
   const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
 
+  // Auto-determine quiz difficulty from selected questions (most common difficulty)
+  const diffCounts: Record<string, number> = {};
+  for (const q of questions) {
+    const d = q.difficulty || "easy";
+    diffCounts[d] = (diffCounts[d] || 0) + 1;
+  }
+  const autoDifficulty = Object.entries(diffCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "easy";
+
   const quiz = await Quiz.create({
     ...quizData,
     questions: questions.map((q) => q._id),
     quizId: uuidv4(),
     totalPoints,
+    difficulty: quizData.difficulty || autoDifficulty,
     createdBy: user._id,
   });
 
