@@ -72,6 +72,13 @@ router.post(
 );
 
 router.post(
+  "/create-password",
+  authLimiter,
+  validate(authValidation.createPasswordSchema),
+  authController.createPassword
+);
+
+router.post(
   "/refresh-token",
   validate(authValidation.refreshTokenSchema),
   authController.refreshToken

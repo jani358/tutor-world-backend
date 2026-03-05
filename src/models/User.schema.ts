@@ -16,6 +16,7 @@ export interface IUser extends Document {
   lastName: string;
   role: UserRole;
   isEmailVerified: boolean;
+  mustChangePassword: boolean;
   verificationCode?: string;
   verificationCodeExpiry?: Date;
   resetPasswordToken?: string;
@@ -74,6 +75,10 @@ const userSchema = new Schema<IUser>(
       default: UserRole.STUDENT,
     },
     isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    mustChangePassword: {
       type: Boolean,
       default: false,
     },

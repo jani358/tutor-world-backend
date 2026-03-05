@@ -94,6 +94,13 @@ export const loginUser = async (
     throw new AppError("Invalid email or password", 401);
   }
 
+  if (user.mustChangePassword) {
+    throw new AppError(
+      "You must create a new password before logging in. Please check your email for the setup link.",
+      403
+    );
+  }
+
   if (!user.isEmailVerified) {
     throw new AppError("Please verify your email before logging in.", 403);
   }
@@ -345,6 +352,37 @@ export const changePassword = async (
   return { message: "Password changed successfully." };
 };
 
+export const createPassword = async (
+  email: string,
+  temporaryPassword: string,
+  newPassword: string
+): Promise<{ message: string }> => {
+  const user = await User.findOne({ email }).select("+password");
+
+  if (!user) {
+    throw new AppError("Invalid email or temporary password", 400);
+  }
+
+  if (!user.mustChangePassword) {
+    throw new AppError("Password has already been created for this account", 400);
+  }
+
+  if (!user.password) {
+    throw new AppError("Invalid account state", 400);
+  }
+
+  const isTempPasswordValid = await bcrypt.compare(temporaryPassword, user.password);
+  if (!isTempPasswordValid) {
+    throw new AppError("Invalid email or temporary password", 400);
+  }
+
+  user.password = await bcrypt.hash(newPassword, 12);
+  user.mustChangePassword = false;
+  await user.save();
+
+  return { message: "Password created successfully. You can now log in." };
+};
+
 export const createTeacher = async (data: {
   email: string;
   firstName: string;
@@ -378,6 +416,7 @@ export const createTeacher = async (data: {
     role: UserRole.TEACHER,
     isEmailVerified: true,
     isActive: true,
+    mustChangePassword: true,
   });
 
   await sendTeacherInviteEmail(user.email, user.firstName, tempPassword);
@@ -428,6 +467,7 @@ export const createStudent = async (data: {
     role: UserRole.STUDENT,
     isEmailVerified: true,
     isActive: true,
+    mustChangePassword: true,
   });
 
   await sendStudentInviteEmail(user.email, user.firstName, tempPassword);

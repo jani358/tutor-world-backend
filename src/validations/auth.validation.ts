@@ -88,6 +88,19 @@ export const changePasswordSchema = Joi.object({
   }),
 });
 
+export const createPasswordSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    "string.email": "Please provide a valid email address",
+    "any.required": "Email is required",
+  }),
+  temporaryPassword: Joi.string().required().messages({
+    "any.required": "Temporary password is required",
+  }),
+  newPassword: strongPassword.messages({
+    "any.required": "New password is required",
+  }),
+});
+
 export const createTeacherSchema = Joi.object({
   email: Joi.string().email().required().messages({
     "any.required": "Email is required",
