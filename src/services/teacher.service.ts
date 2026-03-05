@@ -136,12 +136,43 @@ export const getTeacherStudents = async (
     User.countDocuments(query),
   ]);
 
-  // Enrich each student with className and teacherName
-  const enriched = students.map((s) => ({
-    ...s.toObject(),
-    className: assignedClass.name,
-    teacherName: `${teacher.firstName} ${teacher.lastName}`,
-  }));
+  // Batch fetch quiz stats for all students (avoids N+1)
+  const studentIds = students.map((s) => s._id);
+  const statsAgg = await QuizAttempt.aggregate([
+    {
+      $match: {
+        studentId: { $in: studentIds },
+        status: "completed",
+      },
+    },
+    {
+      $group: {
+        _id: "$studentId",
+        quizzesCompleted: { $sum: 1 },
+        averageScore: { $avg: "$percentage" },
+      },
+    },
+  ]);
+
+  const statsMap: Record<string, { quizzesCompleted: number; averageScore: number }> = {};
+  for (const stat of statsAgg) {
+    statsMap[stat._id.toString()] = {
+      quizzesCompleted: stat.quizzesCompleted,
+      averageScore: Math.round(stat.averageScore || 0),
+    };
+  }
+
+  // Enrich each student with className, teacherName, and quiz stats
+  const enriched = students.map((s) => {
+    const stats = statsMap[s._id.toString()] || { quizzesCompleted: 0, averageScore: 0 };
+    return {
+      ...s.toObject(),
+      className: assignedClass.name,
+      teacherName: `${teacher.firstName} ${teacher.lastName}`,
+      quizzesCompleted: stats.quizzesCompleted,
+      averageScore: stats.averageScore,
+    };
+  });
 
   return {
     students: enriched,
@@ -185,6 +216,41 @@ export const getTeacherResults = async (
     results,
     pagination: { total, page, pages: Math.ceil(total / limit), limit },
   };
+};
+
+export const getAttemptResult = async (
+  userId: string,
+  attemptId: string
+) => {
+  const teacher = await User.findOne({ userId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  // First find the attempt to verify ownership
+  const attempt = await QuizAttempt.findOne({ attemptId });
+  if (!attempt) {
+    throw new AppError("Result not found", 404);
+  }
+
+  // Verify the quiz belongs to this teacher
+  const quiz = await Quiz.findById(attempt.quizId).select("createdBy");
+  if (!quiz || quiz.createdBy.toString() !== teacher._id.toString()) {
+    throw new AppError("Unauthorized", 403);
+  }
+
+  // Now populate the full result separately to avoid populate conflicts
+  const result = await QuizAttempt.findById(attempt._id)
+    .populate({
+      path: "quizId",
+      select: "title description subject grade passingScore totalPoints",
+    })
+    .populate({
+      path: "answers.questionId",
+      select:
+        "title description questionType options correctAnswer explanation imageUrl points",
+    })
+    .populate("studentId", "firstName lastName email userId");
+
+  return result;
 };
 
 export const getTeacherQuizzes = async (
