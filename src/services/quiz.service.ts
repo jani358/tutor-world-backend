@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import Quiz, { QuizStatus } from "../models/Quiz.schema";
 import QuizAttempt, { AttemptStatus } from "../models/QuizAttempt.schema";
 import Question from "../models/Question.schema";
-import User from "../models/User.schema";
+import User, { UserRole } from "../models/User.schema";
 import { AppError } from "../middlewares/errorHandler";
 import mongoose from "mongoose";
 
@@ -321,20 +321,24 @@ export const getQuizResult = async (attemptId: string, userId: string) => {
   const result = await QuizAttempt.findOne({ attemptId })
     .populate({
       path: "quizId",
-      select: "title description subject grade passingScore totalPoints",
+      select: "title description subject grade passingScore totalPoints createdBy",
     })
     .populate({
       path: "answers.questionId",
       select:
         "title description questionType options correctAnswer explanation imageUrl points",
     })
-    .populate("studentId", "firstName lastName email");
+    .populate("studentId", "firstName lastName email userId");
 
   if (!result) {
     throw new AppError("Result not found", 404);
   }
 
-  if (result.studentId._id.toString() !== user._id.toString()) {
+  const isStudent = result.studentId._id.toString() === user._id.toString();
+  const isQuizCreator = (result.quizId as any)?.createdBy?.toString() === user._id.toString();
+  const isAdminOrTeacher = user.role === UserRole.ADMIN || user.role === UserRole.TEACHER;
+
+  if (!isStudent && !(isAdminOrTeacher && isQuizCreator)) {
     throw new AppError("Unauthorized", 403);
   }
 

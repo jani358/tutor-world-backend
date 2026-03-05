@@ -26,6 +26,7 @@ router.get("/quizzes/:quizId/results", teacherController.getQuizResults);
 router.get("/students", teacherController.getStudents);
 
 router.get("/results", teacherController.getResults);
+router.get("/results/:attemptId", teacherController.getAttemptResult);
 
 router.get("/groups", teacherController.getGroups);
 router.post("/groups", validate(adminValidation.createStudentGroupSchema), teacherController.createGroup);

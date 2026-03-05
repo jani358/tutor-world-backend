@@ -174,6 +174,21 @@ export const getQuizResults = asyncHandler(
   }
 );
 
+export const getAttemptResult = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { attemptId } = req.params;
+    const result = await teacherService.getAttemptResult(
+      req.user!.userId,
+      attemptId
+    );
+
+    res.status(200).json({
+      status: "success",
+      data: result,
+    });
+  }
+);
+
 export const getStudents = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const filters = {
