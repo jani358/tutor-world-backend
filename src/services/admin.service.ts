@@ -748,11 +748,21 @@ export const getClasses = async (filters: {
     Class.countDocuments(query),
   ]);
 
+  // Collect all student IDs across classes and count only non-deleted ones
+  const allStudentIds = classes.flatMap((c) => c.students || []);
+  const activeStudentIds = allStudentIds.length > 0
+    ? new Set(
+        (await User.find({ _id: { $in: allStudentIds }, isDeleted: { $ne: true } }).select("_id").lean())
+          .map((s) => s._id.toString())
+      )
+    : new Set<string>();
+
   const enriched = classes.map((c) => {
     const obj = c.toObject();
+    const count = (obj.students || []).filter((id: any) => activeStudentIds.has(id.toString())).length;
     return {
       ...obj,
-      studentCount: obj.students?.length || 0,
+      studentCount: count,
     };
   });
 
