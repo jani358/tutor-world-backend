@@ -489,13 +489,23 @@ export const getTeachers = async (filters: {
     isDeleted: { $ne: true },
   }).select("name teacher students");
 
+  // Count only non-deleted students across all teacher classes
+  const allClassStudentIds = teacherClasses.flatMap((cls) => cls.students || []);
+  const nonDeletedStudentIds = allClassStudentIds.length > 0
+    ? new Set(
+        (await User.find({ _id: { $in: allClassStudentIds }, isDeleted: { $ne: true } }).select("_id").lean())
+          .map((s) => s._id.toString())
+      )
+    : new Set<string>();
+
   const teacherClassMap: Record<string, { assignedClass: string; studentsManaged: number }> = {};
   for (const cls of teacherClasses) {
     const tid = cls.teacher?.toString();
     if (tid) {
+      const count = (cls.students || []).filter((id) => nonDeletedStudentIds.has(id.toString())).length;
       teacherClassMap[tid] = {
         assignedClass: cls.name,
-        studentsManaged: cls.students?.length || 0,
+        studentsManaged: count,
       };
     }
   }
