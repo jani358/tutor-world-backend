@@ -180,6 +180,19 @@ export const updateProfile = asyncHandler(
   }
 );
 
+export const uploadAvatar = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).user?.userId;
+    const fileUrl = (req as any).file?.path;
+    if (!fileUrl) {
+      res.status(400).json({ status: "error", message: "No file uploaded" });
+      return;
+    }
+    const result = await authService.uploadAvatar(userId, fileUrl);
+    res.status(200).json({ status: "success", data: result });
+  }
+);
+
 export const refreshToken = asyncHandler(
   async (req: Request, res: Response) => {
     const { refreshToken: token } = req.body;

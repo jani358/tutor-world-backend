@@ -578,6 +578,14 @@ export const updateProfile = async (
   };
 };
 
+export const uploadAvatar = async (userId: string, fileUrl: string): Promise<{ avatar: string }> => {
+  const user = await User.findOne({ userId, isActive: true });
+  if (!user) throw new AppError("User not found", 404);
+  user.avatar = fileUrl;
+  await user.save();
+  return { avatar: fileUrl };
+};
+
 export const refreshAccessToken = async (
   refreshToken: string
 ): Promise<{ accessToken: string; refreshToken: string }> => {

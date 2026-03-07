@@ -150,6 +150,7 @@ export const getStudentProgress = async (userId: string) => {
     recentScores,
     subjectPerformance,
     difficultyPerformance,
+    difficultyCounts: diffCounts,
     improvementPercentage,
     streakDays,
   };
