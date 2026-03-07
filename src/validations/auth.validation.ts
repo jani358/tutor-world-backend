@@ -140,6 +140,10 @@ export const updateProfileSchema = Joi.object({
   email: Joi.string().email().optional().messages({
     "string.email": "Please provide a valid email address",
   }),
+  username: Joi.string().min(2).max(50).optional().messages({
+    "string.min": "Username must be at least 2 characters",
+    "string.max": "Username must not exceed 50 characters",
+  }),
 });
 
 export const refreshTokenSchema = Joi.object({
