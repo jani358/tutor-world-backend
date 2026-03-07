@@ -123,6 +123,7 @@ export const loginUser = async (
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      avatar: user.avatar,
       grade: user.grade,
       school: user.school,
     },
@@ -521,7 +522,7 @@ export const getProfile = async (
 
 export const updateProfile = async (
   userId: string,
-  data: { firstName?: string; lastName?: string; email?: string }
+  data: { firstName?: string; lastName?: string; email?: string; username?: string }
 ): Promise<{ user: Partial<IUser>; message: string }> => {
   const user = await User.findOne({ userId, isActive: true });
   if (!user) {
@@ -545,6 +546,14 @@ export const updateProfile = async (
     }
     changes.push({ field: "email", oldValue: user.email, newValue: data.email });
     user.email = data.email;
+  }
+  if (data.username && data.username !== user.username) {
+    const existing = await User.findOne({ username: data.username });
+    if (existing) {
+      throw new AppError("Username is already taken", 400);
+    }
+    changes.push({ field: "username", oldValue: user.username, newValue: data.username });
+    user.username = data.username;
   }
 
   if (changes.length === 0) {
