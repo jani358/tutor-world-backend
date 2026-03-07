@@ -728,6 +728,33 @@ export const getDashboardStats = async () => {
   };
 };
 
+export const getRecentActivities = async (limit = 10) => {
+  const AuditLog = (await import("../models/AuditLog.schema")).default;
+  const logs = await AuditLog.find({})
+    .populate("changedBy", "firstName lastName role")
+    .sort({ createdAt: -1 })
+    .limit(limit);
+  return logs;
+};
+
+export const unassignStudentFromClass = async (studentUserId: string) => {
+  const student = await User.findOne({
+    userId: studentUserId,
+    role: UserRole.STUDENT,
+    isDeleted: { $ne: true },
+  });
+  if (!student) throw new AppError("Student not found", 404);
+
+  const classDoc = await Class.findOne({
+    students: student._id,
+    isDeleted: { $ne: true },
+  });
+  if (!classDoc) throw new AppError("Student is not assigned to any class", 400);
+
+  await Class.updateOne({ _id: classDoc._id }, { $pull: { students: student._id } });
+  return { message: "Student removed from class successfully", className: classDoc.name };
+};
+
 export const importStudentsFromCSV = async (csvBuffer: Buffer) => {
   const students: any[] = [];
 

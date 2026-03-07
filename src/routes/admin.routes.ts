@@ -31,6 +31,7 @@ router.get("/results/:attemptId", adminController.getAdminAttemptResult);
 router.get("/students", adminController.getStudents);
 router.patch("/students/:userId", adminController.updateStudent);
 router.patch("/students/:userId/toggle-status", adminController.toggleStudentStatus);
+router.delete("/students/:userId/unassign-class", adminController.unassignStudentFromClass);
 router.delete("/students/:userId", adminController.deleteStudent);
 router.post("/students/import", upload.single("file"), adminController.importStudents);
 
@@ -40,6 +41,7 @@ router.patch("/teachers/:userId/toggle-status", adminController.toggleTeacherSta
 router.delete("/teachers/:userId", adminController.deleteTeacher);
 
 router.get("/audit-logs", adminController.getAuditLogs);
+router.get("/recent-activities", adminController.getRecentActivities);
 
 router.get("/classes", adminController.getClasses);
 router.post("/classes", validate(adminValidation.createClassSchema), adminController.createClass);
