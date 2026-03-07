@@ -4,6 +4,7 @@ import * as authController from "../controllers/auth.controller";
 import { validate } from "../middlewares/validation.middleware";
 import { authenticate, isAdmin } from "../middlewares/auth.middleware";
 import * as authValidation from "../validations/auth.validation";
+import { upload } from "../middlewares/upload.middleware";
 
 const router = Router();
 
@@ -92,6 +93,8 @@ router.post(
 );
 
 router.get("/me", authenticate, authController.getProfile);
+
+router.post("/avatar", authenticate, upload.single("avatar"), authController.uploadAvatar);
 
 router.put(
   "/profile",
