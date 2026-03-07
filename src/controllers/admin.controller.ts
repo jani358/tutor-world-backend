@@ -218,7 +218,7 @@ export const toggleStudentStatus = asyncHandler(
     const { userId } = req.params;
     const { isActive } = req.body;
 
-    const result = await adminService.toggleStudentStatus(userId, isActive);
+    const result = await adminService.toggleStudentStatus(userId, isActive, req.user!.userId);
 
     res.status(200).json({
       status: "success",
@@ -231,7 +231,7 @@ export const toggleStudentStatus = asyncHandler(
 export const deleteStudent = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { userId } = req.params;
-    const result = await adminService.deleteStudent(userId);
+    const result = await adminService.deleteStudent(userId, req.user!.userId);
 
     res.status(200).json({
       status: "success",
@@ -286,7 +286,7 @@ export const toggleTeacherStatus = asyncHandler(
     const { userId } = req.params;
     const { isActive } = req.body;
 
-    const result = await adminService.toggleTeacherStatus(userId, isActive);
+    const result = await adminService.toggleTeacherStatus(userId, isActive, req.user!.userId);
 
     res.status(200).json({
       status: "success",
@@ -299,7 +299,7 @@ export const toggleTeacherStatus = asyncHandler(
 export const deleteTeacher = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { userId } = req.params;
-    const result = await adminService.deleteTeacher(userId);
+    const result = await adminService.deleteTeacher(userId, req.user!.userId);
 
     res.status(200).json({
       status: "success",
@@ -357,7 +357,7 @@ export const getClasses = asyncHandler(
 
 export const createClass = asyncHandler(
   async (req: AuthRequest, res: Response) => {
-    const classDoc = await adminService.createClass(req.body);
+    const classDoc = await adminService.createClass(req.body, req.user!.userId);
 
     res.status(201).json({
       status: "success",
@@ -397,7 +397,7 @@ export const toggleClassStatus = asyncHandler(
 export const deleteClass = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { classId } = req.params;
-    const result = await adminService.deleteClass(classId);
+    const result = await adminService.deleteClass(classId, req.user!.userId);
 
     res.status(200).json({
       status: "success",
@@ -411,7 +411,7 @@ export const assignTeacherToClass = asyncHandler(
     const { classId } = req.params;
     const { teacherId } = req.body;
 
-    const result = await adminService.assignTeacherToClass(classId, teacherId);
+    const result = await adminService.assignTeacherToClass(classId, teacherId, req.user!.userId);
 
     res.status(200).json({
       status: "success",
@@ -426,7 +426,7 @@ export const assignStudentToClass = asyncHandler(
     const { userId } = req.params;
     const { classId } = req.body;
 
-    const result = await adminService.assignStudentToClass(userId, classId);
+    const result = await adminService.assignStudentToClass(userId, classId, req.user!.userId);
 
     res.status(200).json({
       status: "success",
