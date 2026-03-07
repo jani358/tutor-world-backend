@@ -1,0 +1,290 @@
+[
+  {
+    "_id": { "$oid": "665a00000000000000000011" },
+    "quizId": "quiz-001",
+    "title": "Algebra Basics",
+    "description": "Test your understanding of basic algebra including equations and expressions.",
+    "subject": "Mathematics",
+    "grade": "Grade 9",
+    "difficulty": "easy",
+    "timeLimit": 20,
+    "totalPoints": 5,
+    "passingScore": 60,
+    "questions": [
+      { "$oid": "665a000000000000000000d1" },
+      { "$oid": "665a000000000000000000d2" },
+      { "$oid": "665a000000000000000000d3" },
+      { "$oid": "665a000000000000000000d4" },
+      { "$oid": "665a000000000000000000d5" }
+    ],
+    "isRandomized": false,
+    "numberOfQuestions": 5,
+    "assignedTo": [
+      { "$oid": "665a000000000000000000b1" },
+      { "$oid": "665a000000000000000000b2" },
+      { "$oid": "665a000000000000000000b3" }
+    ],
+    "status": "active",
+    "startDate": { "$date": "2024-02-01T00:00:00.000Z" },
+    "endDate": { "$date": "2024-06-30T23:59:59.000Z" },
+    "createdBy": { "$oid": "665a000000000000000000a1" },
+    "isDeleted": false,
+    "instructions": "Answer all questions. Each correct answer is worth 1 point.",
+    "createdAt": { "$date": "2024-01-25T08:00:00.000Z" },
+    "updatedAt": { "$date": "2024-01-25T08:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "665a00000000000000000012" },
+    "quizId": "quiz-002",
+    "title": "Geometry & Algebra Intermediate",
+    "description": "Intermediate level quiz covering coordinate geometry, quadratics and triangles.",
+    "subject": "Mathematics",
+    "grade": "Grade 9",
+    "difficulty": "medium",
+    "timeLimit": 30,
+    "totalPoints": 6,
+    "passingScore": 60,
+    "questions": [
+      { "$oid": "665a000000000000000000e1" },
+      { "$oid": "665a000000000000000000e2" },
+      { "$oid": "665a000000000000000000e3" }
+    ],
+    "isRandomized": false,
+    "numberOfQuestions": 3,
+    "assignedTo": [
+      { "$oid": "665a000000000000000000b1" },
+      { "$oid": "665a000000000000000000b2" },
+      { "$oid": "665a000000000000000000b3" }
+    ],
+    "status": "active",
+    "startDate": { "$date": "2024-02-01T00:00:00.000Z" },
+    "endDate": { "$date": "2024-06-30T23:59:59.000Z" },
+    "createdBy": { "$oid": "665a000000000000000000a1" },
+    "isDeleted": false,
+    "instructions": "Each question is worth 2 points. Show your working where applicable.",
+    "createdAt": { "$date": "2024-01-25T08:30:00.000Z" },
+    "updatedAt": { "$date": "2024-01-25T08:30:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "665a00000000000000000013" },
+    "quizId": "quiz-003",
+    "title": "Advanced Mathematics Challenge",
+    "description": "Challenging questions on calculus, circles and infinite series.",
+    "subject": "Mathematics",
+    "grade": "Grade 9",
+    "difficulty": "hard",
+    "timeLimit": 45,
+    "totalPoints": 9,
+    "passingScore": 60,
+    "questions": [
+      { "$oid": "665a000000000000000000f1" },
+      { "$oid": "665a000000000000000000f2" },
+      { "$oid": "665a000000000000000000f3" }
+    ],
+    "isRandomized": false,
+    "numberOfQuestions": 3,
+    "assignedTo": [
+      { "$oid": "665a000000000000000000b1" },
+      { "$oid": "665a000000000000000000b3" }
+    ],
+    "status": "active",
+    "startDate": { "$date": "2024-02-15T00:00:00.000Z" },
+    "endDate": { "$date": "2024-06-30T23:59:59.000Z" },
+    "createdBy": { "$oid": "665a000000000000000000a1" },
+    "isDeleted": false,
+    "instructions": "Each question is worth 3 points. This is an advanced assessment.",
+    "createdAt": { "$date": "2024-01-26T08:00:00.000Z" },
+    "updatedAt": { "$date": "2024-01-26T08:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "665a00000000000000000014" },
+    "quizId": "quiz-004",
+    "title": "Science Fundamentals",
+    "description": "Basic science quiz covering chemistry, astronomy and biology.",
+    "subject": "Science",
+    "grade": "Grade 10",
+    "difficulty": "easy",
+    "timeLimit": 20,
+    "totalPoints": 4,
+    "passingScore": 60,
+    "questions": [
+      { "$oid": "665a000000000000000000d6" },
+      { "$oid": "665a000000000000000000d7" },
+      { "$oid": "665a000000000000000000d8" },
+      { "$oid": "665a000000000000000000d9" }
+    ],
+    "isRandomized": false,
+    "numberOfQuestions": 4,
+    "assignedTo": [
+      { "$oid": "665a000000000000000000b4" },
+      { "$oid": "665a000000000000000000b5" },
+      { "$oid": "665a000000000000000000b6" }
+    ],
+    "status": "active",
+    "startDate": { "$date": "2024-02-01T00:00:00.000Z" },
+    "endDate": { "$date": "2024-06-30T23:59:59.000Z" },
+    "createdBy": { "$oid": "665a000000000000000000a2" },
+    "isDeleted": false,
+    "instructions": "Select the best answer for each question.",
+    "createdAt": { "$date": "2024-01-25T09:00:00.000Z" },
+    "updatedAt": { "$date": "2024-01-25T09:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "665a00000000000000000015" },
+    "quizId": "quiz-005",
+    "title": "Physics & Biology Intermediate",
+    "description": "Intermediate science covering Newton's Laws, cell biology and pH.",
+    "subject": "Science",
+    "grade": "Grade 10",
+    "difficulty": "medium",
+    "timeLimit": 30,
+    "totalPoints": 6,
+    "passingScore": 60,
+    "questions": [
+      { "$oid": "665a000000000000000000e4" },
+      { "$oid": "665a000000000000000000e5" },
+      { "$oid": "665a000000000000000000e6" }
+    ],
+    "isRandomized": false,
+    "numberOfQuestions": 3,
+    "assignedTo": [
+      { "$oid": "665a000000000000000000b4" },
+      { "$oid": "665a000000000000000000b5" },
+      { "$oid": "665a000000000000000000b6" }
+    ],
+    "status": "active",
+    "startDate": { "$date": "2024-02-01T00:00:00.000Z" },
+    "endDate": { "$date": "2024-06-30T23:59:59.000Z" },
+    "createdBy": { "$oid": "665a000000000000000000a2" },
+    "isDeleted": false,
+    "instructions": "Each correct answer earns 2 points.",
+    "createdAt": { "$date": "2024-01-25T09:30:00.000Z" },
+    "updatedAt": { "$date": "2024-01-25T09:30:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "665a00000000000000000016" },
+    "quizId": "quiz-006",
+    "title": "Advanced Science: Forces, Reactions & Osmosis",
+    "description": "Hard-level science covering stoichiometry, force calculations and cell transport.",
+    "subject": "Science",
+    "grade": "Grade 10",
+    "difficulty": "hard",
+    "timeLimit": 45,
+    "totalPoints": 9,
+    "passingScore": 60,
+    "questions": [
+      { "$oid": "665a000000000000000000f4" },
+      { "$oid": "665a000000000000000000f5" },
+      { "$oid": "665a000000000000000000f6" }
+    ],
+    "isRandomized": false,
+    "numberOfQuestions": 3,
+    "assignedTo": [
+      { "$oid": "665a000000000000000000b4" },
+      { "$oid": "665a000000000000000000b6" }
+    ],
+    "status": "active",
+    "startDate": { "$date": "2024-02-15T00:00:00.000Z" },
+    "endDate": { "$date": "2024-06-30T23:59:59.000Z" },
+    "createdBy": { "$oid": "665a000000000000000000a2" },
+    "isDeleted": false,
+    "instructions": "Each question is worth 3 points. Think carefully before answering.",
+    "createdAt": { "$date": "2024-01-26T09:00:00.000Z" },
+    "updatedAt": { "$date": "2024-01-26T09:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "665a00000000000000000017" },
+    "quizId": "quiz-007",
+    "title": "English Grammar Essentials",
+    "description": "Basic English grammar covering nouns, verb tenses and literary devices.",
+    "subject": "English",
+    "grade": "Grade 11",
+    "difficulty": "easy",
+    "timeLimit": 20,
+    "totalPoints": 3,
+    "passingScore": 60,
+    "questions": [
+      { "$oid": "665a000000000000000000da" },
+      { "$oid": "665a000000000000000000db" },
+      { "$oid": "665a000000000000000000dc" }
+    ],
+    "isRandomized": false,
+    "numberOfQuestions": 3,
+    "assignedTo": [
+      { "$oid": "665a000000000000000000b7" },
+      { "$oid": "665a000000000000000000b8" },
+      { "$oid": "665a000000000000000000b9" }
+    ],
+    "status": "active",
+    "startDate": { "$date": "2024-02-01T00:00:00.000Z" },
+    "endDate": { "$date": "2024-06-30T23:59:59.000Z" },
+    "createdBy": { "$oid": "665a000000000000000000a3" },
+    "isDeleted": false,
+    "instructions": "Choose the most appropriate answer for each question.",
+    "createdAt": { "$date": "2024-01-25T10:00:00.000Z" },
+    "updatedAt": { "$date": "2024-01-25T10:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "665a00000000000000000018" },
+    "quizId": "quiz-008",
+    "title": "Literature & Language Intermediate",
+    "description": "Intermediate English covering Shakespeare, literary devices and grammar.",
+    "subject": "English",
+    "grade": "Grade 11",
+    "difficulty": "medium",
+    "timeLimit": 30,
+    "totalPoints": 6,
+    "passingScore": 60,
+    "questions": [
+      { "$oid": "665a000000000000000000e7" },
+      { "$oid": "665a000000000000000000e8" },
+      { "$oid": "665a000000000000000000e9" }
+    ],
+    "isRandomized": false,
+    "numberOfQuestions": 3,
+    "assignedTo": [
+      { "$oid": "665a000000000000000000b7" },
+      { "$oid": "665a000000000000000000b8" },
+      { "$oid": "665a000000000000000000b9" }
+    ],
+    "status": "active",
+    "startDate": { "$date": "2024-02-01T00:00:00.000Z" },
+    "endDate": { "$date": "2024-06-30T23:59:59.000Z" },
+    "createdBy": { "$oid": "665a000000000000000000a3" },
+    "isDeleted": false,
+    "instructions": "Each question carries 2 marks.",
+    "createdAt": { "$date": "2024-01-25T10:30:00.000Z" },
+    "updatedAt": { "$date": "2024-01-25T10:30:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "665a00000000000000000019" },
+    "quizId": "quiz-009",
+    "title": "Advanced English Literary Analysis",
+    "description": "Advanced level: analysing 1984, iambic pentameter and essay writing.",
+    "subject": "English",
+    "grade": "Grade 11",
+    "difficulty": "hard",
+    "timeLimit": 45,
+    "totalPoints": 9,
+    "passingScore": 60,
+    "questions": [
+      { "$oid": "665a000000000000000000f7" },
+      { "$oid": "665a000000000000000000f8" },
+      { "$oid": "665a000000000000000000f9" }
+    ],
+    "isRandomized": false,
+    "numberOfQuestions": 3,
+    "assignedTo": [
+      { "$oid": "665a000000000000000000b7" },
+      { "$oid": "665a000000000000000000b9" }
+    ],
+    "status": "active",
+    "startDate": { "$date": "2024-02-15T00:00:00.000Z" },
+    "endDate": { "$date": "2024-06-30T23:59:59.000Z" },
+    "createdBy": { "$oid": "665a000000000000000000a3" },
+    "isDeleted": false,
+    "instructions": "Each question is worth 3 marks. Analyse carefully.",
+    "createdAt": { "$date": "2024-01-26T10:00:00.000Z" },
+    "updatedAt": { "$date": "2024-01-26T10:00:00.000Z" }
+  }
+]
