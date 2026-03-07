@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as authService from "../services/auth.service";
 import { asyncHandler } from "../middlewares/errorHandler";
+import { AuthRequest } from "../middlewares/auth.middleware";
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const result = await authService.registerUser(req.body);
@@ -128,7 +129,8 @@ export const createPassword = asyncHandler(
 
 export const createTeacher = asyncHandler(
   async (req: Request, res: Response) => {
-    const result = await authService.createTeacher(req.body);
+    const actorId = (req as AuthRequest).user?.userId;
+    const result = await authService.createTeacher(req.body, actorId);
 
     res.status(201).json({
       status: "success",
@@ -140,7 +142,8 @@ export const createTeacher = asyncHandler(
 
 export const createStudent = asyncHandler(
   async (req: Request, res: Response) => {
-    const result = await authService.createStudent(req.body);
+    const actorId = (req as AuthRequest).user?.userId;
+    const result = await authService.createStudent(req.body, actorId);
 
     res.status(201).json({
       status: "success",

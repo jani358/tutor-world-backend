@@ -9,6 +9,7 @@ import {
 } from "../utils/jwt";
 import { sendVerificationEmail, sendPasswordResetEmail, sendTeacherInviteEmail, sendStudentInviteEmail } from "../utils/email";
 import { AppError } from "../middlewares/errorHandler";
+import { logAudit } from "../utils/auditLogger";
 
 export const registerUser = async (data: {
   email: string;
@@ -389,7 +390,7 @@ export const createTeacher = async (data: {
   lastName: string;
   username?: string;
   password?: string;
-}): Promise<{ user: Partial<IUser>; message: string }> => {
+}, actorId?: string): Promise<{ user: Partial<IUser>; message: string }> => {
   const existingEmail = await User.findOne({ email: data.email });
   if (existingEmail) {
     throw new AppError("User with this email already exists", 400);
@@ -421,6 +422,11 @@ export const createTeacher = async (data: {
 
   await sendTeacherInviteEmail(user.email, user.firstName, tempPassword);
 
+  if (actorId) {
+    const actor = await User.findOne({ userId: actorId });
+    if (actor) logAudit({ action: "CREATED", targetType: "Teacher", targetId: user.userId, targetLabel: `${user.firstName} ${user.lastName}`, changedBy: actor._id });
+  }
+
   return {
     user: {
       userId: user.userId,
@@ -440,7 +446,7 @@ export const createStudent = async (data: {
   lastName: string;
   username?: string;
   password?: string;
-}): Promise<{ user: Partial<IUser>; message: string }> => {
+}, actorId?: string): Promise<{ user: Partial<IUser>; message: string }> => {
   const existingEmail = await User.findOne({ email: data.email });
   if (existingEmail) {
     throw new AppError("User with this email already exists", 400);
@@ -471,6 +477,11 @@ export const createStudent = async (data: {
   });
 
   await sendStudentInviteEmail(user.email, user.firstName, tempPassword);
+
+  if (actorId) {
+    const actor = await User.findOne({ userId: actorId });
+    if (actor) logAudit({ action: "CREATED", targetType: "Student", targetId: user.userId, targetLabel: `${user.firstName} ${user.lastName}`, changedBy: actor._id });
+  }
 
   return {
     user: {

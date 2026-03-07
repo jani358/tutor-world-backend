@@ -170,7 +170,7 @@ export const getAllResults = asyncHandler(
 export const updateStudent = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { userId } = req.params;
-    const student = await adminService.updateStudent(userId, req.body);
+    const student = await adminService.updateStudent(userId, req.body, req.user!.userId);
     res.status(200).json({ status: "success", message: "Student updated successfully", data: student });
   }
 );
@@ -178,7 +178,7 @@ export const updateStudent = asyncHandler(
 export const updateTeacher = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { userId } = req.params;
-    const teacher = await adminService.updateTeacher(userId, req.body);
+    const teacher = await adminService.updateTeacher(userId, req.body, req.user!.userId);
     res.status(200).json({ status: "success", message: "Teacher updated successfully", data: teacher });
   }
 );
@@ -438,7 +438,7 @@ export const assignStudentToClass = asyncHandler(
 export const unassignStudentFromClass = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const { userId } = req.params;
-    const result = await adminService.unassignStudentFromClass(userId);
+    const result = await adminService.unassignStudentFromClass(userId, req.user!.userId);
     res.status(200).json({ status: "success", message: result.message });
   }
 );

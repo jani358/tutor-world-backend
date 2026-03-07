@@ -6,6 +6,7 @@ import QuizAttempt from "../models/QuizAttempt.schema";
 import Class from "../models/Class.schema";
 import Subject from "../models/Subject.schema";
 import Notification from "../models/Notification.schema";
+import AuditLog from "../models/AuditLog.schema";
 import { AppError } from "../middlewares/errorHandler";
 import { logAudit } from "../utils/auditLogger";
 import { sendQuizAssignmentEmail } from "../utils/email";
@@ -363,7 +364,8 @@ export const getAllResults = async () => {
 
 export const updateStudent = async (
   userId: string,
-  data: { firstName?: string; lastName?: string; email?: string; username?: string }
+  data: { firstName?: string; lastName?: string; email?: string; username?: string },
+  actorUserId?: string
 ) => {
   const student = await User.findOne({ userId, role: UserRole.STUDENT, isDeleted: { $ne: true } });
   if (!student) throw new AppError("Student not found", 404);
@@ -383,12 +385,18 @@ export const updateStudent = async (
   if (data.username) student.username = data.username;
   await student.save();
 
+  if (actorUserId) {
+    const actor = await User.findOne({ userId: actorUserId });
+    if (actor) logAudit({ action: "UPDATED", targetType: "Student", targetId: student.userId, targetLabel: `${student.firstName} ${student.lastName}`, changedBy: actor._id });
+  }
+
   return student;
 };
 
 export const updateTeacher = async (
   userId: string,
-  data: { firstName?: string; lastName?: string; email?: string; username?: string }
+  data: { firstName?: string; lastName?: string; email?: string; username?: string },
+  actorUserId?: string
 ) => {
   const teacher = await User.findOne({ userId, role: UserRole.TEACHER, isDeleted: { $ne: true } });
   if (!teacher) throw new AppError("Teacher not found", 404);
@@ -407,6 +415,11 @@ export const updateTeacher = async (
   if (data.email) teacher.email = data.email;
   if (data.username) teacher.username = data.username;
   await teacher.save();
+
+  if (actorUserId) {
+    const actor = await User.findOne({ userId: actorUserId });
+    if (actor) logAudit({ action: "UPDATED", targetType: "Teacher", targetId: teacher.userId, targetLabel: `${teacher.firstName} ${teacher.lastName}`, changedBy: actor._id });
+  }
 
   return teacher;
 };
@@ -758,7 +771,6 @@ export const getDashboardStats = async () => {
 };
 
 export const getRecentActivities = async (limit = 10) => {
-  const AuditLog = (await import("../models/AuditLog.schema")).default;
   const logs = await AuditLog.find({})
     .populate("changedBy", "firstName lastName role")
     .sort({ createdAt: -1 })
@@ -766,7 +778,7 @@ export const getRecentActivities = async (limit = 10) => {
   return logs;
 };
 
-export const unassignStudentFromClass = async (studentUserId: string) => {
+export const unassignStudentFromClass = async (studentUserId: string, actorUserId?: string) => {
   const student = await User.findOne({
     userId: studentUserId,
     role: UserRole.STUDENT,
@@ -781,6 +793,12 @@ export const unassignStudentFromClass = async (studentUserId: string) => {
   if (!classDoc) throw new AppError("Student is not assigned to any class", 400);
 
   await Class.updateOne({ _id: classDoc._id }, { $pull: { students: student._id } });
+
+  if (actorUserId) {
+    const actor = await User.findOne({ userId: actorUserId });
+    if (actor) logAudit({ action: "UPDATED", targetType: "Student", targetId: student.userId, targetLabel: `${student.firstName} ${student.lastName}`, changedBy: actor._id, changes: [{ field: "class", oldValue: classDoc.name, newValue: "Unassigned" }] });
+  }
+
   return { message: "Student removed from class successfully", className: classDoc.name };
 };
 
