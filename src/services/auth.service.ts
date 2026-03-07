@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import User, { IUser, UserRole } from "../models/User.schema";
+import Class from "../models/Class.schema";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -481,7 +482,16 @@ export const createStudent = async (data: {
 
   if (actorId) {
     const actor = await User.findOne({ userId: actorId });
-    if (actor) logAudit({ action: "CREATED", targetType: "Student", targetId: user.userId, targetLabel: `${user.firstName} ${user.lastName}`, changedBy: actor._id });
+    if (actor) {
+      logAudit({ action: "CREATED", targetType: "Student", targetId: user.userId, targetLabel: `${user.firstName} ${user.lastName}`, changedBy: actor._id });
+      // If actor is a teacher, add student to their assigned class
+      if (actor.role === UserRole.TEACHER) {
+        await Class.findOneAndUpdate(
+          { teacher: actor._id, isDeleted: { $ne: true } },
+          { $addToSet: { students: user._id } }
+        );
+      }
+    }
   }
 
   return {
