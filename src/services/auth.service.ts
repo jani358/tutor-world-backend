@@ -123,6 +123,7 @@ export const loginUser = async (
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      avatar: user.avatar,
       grade: user.grade,
       school: user.school,
     },
