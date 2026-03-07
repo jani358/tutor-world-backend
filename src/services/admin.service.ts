@@ -7,6 +7,7 @@ import Class from "../models/Class.schema";
 import Subject from "../models/Subject.schema";
 import Notification from "../models/Notification.schema";
 import { AppError } from "../middlewares/errorHandler";
+import { logAudit } from "../utils/auditLogger";
 import { sendQuizAssignmentEmail } from "../utils/email";
 import csv from "csv-parser";
 import { Readable } from "stream";
@@ -23,6 +24,8 @@ export const createQuestion = async (
     questionId: uuidv4(),
     createdBy: user._id,
   });
+
+  logAudit({ action: "CREATED", targetType: "Question", targetId: question.questionId, targetLabel: (questionData as any).title || "Question", changedBy: user._id });
 
   return question;
 };
@@ -79,6 +82,7 @@ export const deleteQuestion = async (questionId: string, userId: string) => {
     };
   }
 
+  logAudit({ action: "DELETED", targetType: "Question", targetId: question.questionId, targetLabel: question.title, changedBy: user._id });
   await Question.deleteOne({ questionId });
   return { message: "Question deleted successfully" };
 };
@@ -169,6 +173,8 @@ export const createQuiz = async (
     createdBy: user._id,
   });
 
+  logAudit({ action: "CREATED", targetType: "Quiz", targetId: quiz.quizId, targetLabel: quiz.title, changedBy: user._id });
+
   return quiz;
 };
 
@@ -231,6 +237,7 @@ export const deleteQuiz = async (quizId: string, userId: string) => {
     };
   }
 
+  logAudit({ action: "DELETED", targetType: "Quiz", targetId: quiz.quizId, targetLabel: quiz.title, changedBy: user._id });
   await Quiz.deleteOne({ quizId });
   return { message: "Quiz deleted successfully" };
 };
@@ -487,7 +494,8 @@ export const getStudents = async (filters: {
 
 export const toggleStudentStatus = async (
   userId: string,
-  isActive: boolean
+  isActive: boolean,
+  actorUserId?: string
 ) => {
   const student = await User.findOne({
     userId,
@@ -498,6 +506,11 @@ export const toggleStudentStatus = async (
 
   student.isActive = isActive;
   await student.save();
+
+  if (actorUserId) {
+    const actor = await User.findOne({ userId: actorUserId });
+    if (actor) logAudit({ action: "STATUS_CHANGE", targetType: "Student", targetId: student.userId, targetLabel: `${student.firstName} ${student.lastName}`, changedBy: actor._id, changes: [{ field: "isActive", oldValue: !isActive, newValue: isActive }] });
+  }
 
   return {
     message: `Student account ${isActive ? "activated" : "deactivated"} successfully`,
@@ -511,7 +524,7 @@ export const toggleStudentStatus = async (
   };
 };
 
-export const deleteStudent = async (userId: string) => {
+export const deleteStudent = async (userId: string, actorUserId?: string) => {
   const student = await User.findOne({
     userId,
     role: UserRole.STUDENT,
@@ -523,6 +536,11 @@ export const deleteStudent = async (userId: string) => {
   student.isActive = false;
   student.deletedAt = new Date();
   await student.save();
+
+  if (actorUserId) {
+    const actor = await User.findOne({ userId: actorUserId });
+    if (actor) logAudit({ action: "DELETED", targetType: "Student", targetId: student.userId, targetLabel: `${student.firstName} ${student.lastName}`, changedBy: actor._id });
+  }
 
   return { message: "Student account deleted successfully" };
 };
@@ -611,7 +629,8 @@ export const getTeachers = async (filters: {
 
 export const toggleTeacherStatus = async (
   userId: string,
-  isActive: boolean
+  isActive: boolean,
+  actorUserId?: string
 ) => {
   const teacher = await User.findOne({
     userId,
@@ -622,6 +641,11 @@ export const toggleTeacherStatus = async (
 
   teacher.isActive = isActive;
   await teacher.save();
+
+  if (actorUserId) {
+    const actor = await User.findOne({ userId: actorUserId });
+    if (actor) logAudit({ action: "STATUS_CHANGE", targetType: "Teacher", targetId: teacher.userId, targetLabel: `${teacher.firstName} ${teacher.lastName}`, changedBy: actor._id, changes: [{ field: "isActive", oldValue: !isActive, newValue: isActive }] });
+  }
 
   return {
     message: `Teacher account ${isActive ? "activated" : "deactivated"} successfully`,
@@ -635,7 +659,7 @@ export const toggleTeacherStatus = async (
   };
 };
 
-export const deleteTeacher = async (userId: string) => {
+export const deleteTeacher = async (userId: string, actorUserId?: string) => {
   const teacher = await User.findOne({
     userId,
     role: UserRole.TEACHER,
@@ -665,6 +689,11 @@ export const deleteTeacher = async (userId: string) => {
   teacher.isActive = false;
   teacher.deletedAt = new Date();
   await teacher.save();
+
+  if (actorUserId) {
+    const actor = await User.findOne({ userId: actorUserId });
+    if (actor) logAudit({ action: "DELETED", targetType: "Teacher", targetId: teacher.userId, targetLabel: `${teacher.firstName} ${teacher.lastName}`, changedBy: actor._id });
+  }
 
   return { message: "Teacher account deleted successfully" };
 };
@@ -884,7 +913,7 @@ export const createClass = async (data: {
   name: string;
   description?: string;
   teacherId?: string;
-}) => {
+}, actorUserId?: string) => {
   let teacherObjectId;
   if (data.teacherId) {
     const teacher = await User.findOne({
@@ -902,6 +931,11 @@ export const createClass = async (data: {
     description: data.description || "",
     teacher: teacherObjectId,
   });
+
+  if (actorUserId) {
+    const actor = await User.findOne({ userId: actorUserId });
+    if (actor) logAudit({ action: "CREATED", targetType: "Class", targetId: classDoc.classId, targetLabel: classDoc.name, changedBy: actor._id });
+  }
 
   return classDoc;
 };
@@ -948,7 +982,7 @@ export const toggleClassStatus = async (
   return { message: `Class ${status === "active" ? "activated" : "deactivated"} successfully` };
 };
 
-export const deleteClass = async (classId: string) => {
+export const deleteClass = async (classId: string, actorUserId?: string) => {
   const classDoc = await Class.findOne({ classId, isDeleted: { $ne: true } });
   if (!classDoc) throw new AppError("Class not found", 404);
 
@@ -956,12 +990,18 @@ export const deleteClass = async (classId: string) => {
   classDoc.deletedAt = new Date();
   await classDoc.save();
 
+  if (actorUserId) {
+    const actor = await User.findOne({ userId: actorUserId });
+    if (actor) logAudit({ action: "DELETED", targetType: "Class", targetId: classDoc.classId, targetLabel: classDoc.name, changedBy: actor._id });
+  }
+
   return { message: "Class deleted successfully" };
 };
 
 export const assignTeacherToClass = async (
   classId: string,
-  teacherId: string
+  teacherId: string,
+  actorUserId?: string
 ) => {
   const classDoc = await Class.findOne({ classId, isDeleted: { $ne: true } });
   if (!classDoc) throw new AppError("Class not found", 404);
@@ -981,13 +1021,18 @@ export const assignTeacherToClass = async (
   });
   if (existingClass) {
     throw new AppError(
-      `This teacher is already assigned to "${existingClass.name}". Remove them from that class first.`,
+      `This teacher is already assigned to "${existingClass.name}". Remove them from that class first before assigning to another.`,
       400
     );
   }
 
   classDoc.teacher = teacher._id;
   await classDoc.save();
+
+  if (actorUserId) {
+    const actor = await User.findOne({ userId: actorUserId });
+    if (actor) logAudit({ action: "ASSIGNED", targetType: "Class", targetId: classDoc.classId, targetLabel: classDoc.name, changedBy: actor._id, changes: [{ field: "teacher", newValue: `${teacher.firstName} ${teacher.lastName}` }] });
+  }
 
   return {
     message: "Teacher assigned to class successfully",
@@ -1001,7 +1046,8 @@ export const assignTeacherToClass = async (
 
 export const assignStudentToClass = async (
   studentUserId: string,
-  classId: string
+  classId: string,
+  actorUserId?: string
 ) => {
   const classDoc = await Class.findOne({ classId, isDeleted: { $ne: true } });
   if (!classDoc) throw new AppError("Class not found", 404);
@@ -1035,6 +1081,11 @@ export const assignStudentToClass = async (
     { _id: classDoc._id },
     { $addToSet: { students: student._id } }
   );
+
+  if (actorUserId) {
+    const actor = await User.findOne({ userId: actorUserId });
+    if (actor) logAudit({ action: "ASSIGNED", targetType: "Student", targetId: student.userId, targetLabel: `${student.firstName} ${student.lastName}`, changedBy: actor._id, changes: [{ field: "class", newValue: classDoc.name }] });
+  }
 
   return { message: "Student assigned to class successfully" };
 };
