@@ -1,0 +1,50 @@
+[
+  {
+    "_id": { "$oid": "665a000000000000000000c1" },
+    "classId": "class-001",
+    "name": "Grade 9 Mathematics",
+    "description": "Foundational mathematics for Grade 9 students covering algebra, geometry and statistics.",
+    "teacher": { "$oid": "665a000000000000000000a1" },
+    "students": [
+      { "$oid": "665a000000000000000000b1" },
+      { "$oid": "665a000000000000000000b2" },
+      { "$oid": "665a000000000000000000b3" }
+    ],
+    "status": "active",
+    "isDeleted": false,
+    "createdAt": { "$date": "2024-01-20T08:00:00.000Z" },
+    "updatedAt": { "$date": "2024-01-20T08:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "665a000000000000000000c2" },
+    "classId": "class-002",
+    "name": "Grade 10 Science",
+    "description": "Integrated science for Grade 10 covering physics, chemistry and biology fundamentals.",
+    "teacher": { "$oid": "665a000000000000000000a2" },
+    "students": [
+      { "$oid": "665a000000000000000000b4" },
+      { "$oid": "665a000000000000000000b5" },
+      { "$oid": "665a000000000000000000b6" }
+    ],
+    "status": "active",
+    "isDeleted": false,
+    "createdAt": { "$date": "2024-01-20T08:00:00.000Z" },
+    "updatedAt": { "$date": "2024-01-20T08:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "665a000000000000000000c3" },
+    "classId": "class-003",
+    "name": "Grade 11 English Literature",
+    "description": "Advanced English literature analysis, essay writing and critical thinking for Grade 11.",
+    "teacher": { "$oid": "665a000000000000000000a3" },
+    "students": [
+      { "$oid": "665a000000000000000000b7" },
+      { "$oid": "665a000000000000000000b8" },
+      { "$oid": "665a000000000000000000b9" }
+    ],
+    "status": "active",
+    "isDeleted": false,
+    "createdAt": { "$date": "2024-01-20T08:00:00.000Z" },
+    "updatedAt": { "$date": "2024-01-20T08:00:00.000Z" }
+  }
+]

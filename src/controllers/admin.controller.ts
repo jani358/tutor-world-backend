@@ -445,7 +445,7 @@ export const unassignStudentFromClass = asyncHandler(
 
 export const getRecentActivities = asyncHandler(
   async (_req: AuthRequest, res: Response) => {
-    const activities = await adminService.getRecentActivities(10);
+    const activities = await adminService.getRecentActivities(5);
     res.status(200).json({ status: "success", data: activities });
   }
 );
