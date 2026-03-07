@@ -435,6 +435,21 @@ export const assignStudentToClass = asyncHandler(
   }
 );
 
+export const unassignStudentFromClass = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { userId } = req.params;
+    const result = await adminService.unassignStudentFromClass(userId);
+    res.status(200).json({ status: "success", message: result.message });
+  }
+);
+
+export const getRecentActivities = asyncHandler(
+  async (_req: AuthRequest, res: Response) => {
+    const activities = await adminService.getRecentActivities(10);
+    res.status(200).json({ status: "success", data: activities });
+  }
+);
+
 export const getSubjects = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const filters = {
