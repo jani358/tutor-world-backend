@@ -189,6 +189,14 @@ export const getAttemptResult = asyncHandler(
   }
 );
 
+export const updateStudent = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { userId } = req.params;
+    const student = await teacherService.updateStudentInClass(req.user!.userId, userId, req.body);
+    res.status(200).json({ status: "success", message: "Student updated successfully", data: student });
+  }
+);
+
 export const getStudents = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const filters = {

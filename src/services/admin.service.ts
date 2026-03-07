@@ -354,6 +354,72 @@ export const getAllResults = async () => {
   return results;
 };
 
+export const updateStudent = async (
+  userId: string,
+  data: { firstName?: string; lastName?: string; email?: string; username?: string }
+) => {
+  const student = await User.findOne({ userId, role: UserRole.STUDENT, isDeleted: { $ne: true } });
+  if (!student) throw new AppError("Student not found", 404);
+
+  if (data.email && data.email !== student.email) {
+    const exists = await User.findOne({ email: data.email, _id: { $ne: student._id } });
+    if (exists) throw new AppError("Email already in use", 409);
+  }
+  if (data.username && data.username !== student.username) {
+    const exists = await User.findOne({ username: data.username, _id: { $ne: student._id } });
+    if (exists) throw new AppError("Username already in use", 409);
+  }
+
+  if (data.firstName) student.firstName = data.firstName;
+  if (data.lastName) student.lastName = data.lastName;
+  if (data.email) student.email = data.email;
+  if (data.username) student.username = data.username;
+  await student.save();
+
+  return student;
+};
+
+export const updateTeacher = async (
+  userId: string,
+  data: { firstName?: string; lastName?: string; email?: string; username?: string }
+) => {
+  const teacher = await User.findOne({ userId, role: UserRole.TEACHER, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  if (data.email && data.email !== teacher.email) {
+    const exists = await User.findOne({ email: data.email, _id: { $ne: teacher._id } });
+    if (exists) throw new AppError("Email already in use", 409);
+  }
+  if (data.username && data.username !== teacher.username) {
+    const exists = await User.findOne({ username: data.username, _id: { $ne: teacher._id } });
+    if (exists) throw new AppError("Username already in use", 409);
+  }
+
+  if (data.firstName) teacher.firstName = data.firstName;
+  if (data.lastName) teacher.lastName = data.lastName;
+  if (data.email) teacher.email = data.email;
+  if (data.username) teacher.username = data.username;
+  await teacher.save();
+
+  return teacher;
+};
+
+export const getAdminAttemptResult = async (attemptId: string) => {
+  const result = await QuizAttempt.findOne({ attemptId })
+    .populate({
+      path: "quizId",
+      select: "title description subject grade passingScore totalPoints",
+    })
+    .populate({
+      path: "answers.questionId",
+      select: "title description questionType options correctAnswer explanation imageUrl points",
+    })
+    .populate("studentId", "firstName lastName email userId");
+
+  if (!result) throw new AppError("Result not found", 404);
+  return result;
+};
+
 export const getStudents = async (filters: {
   isActive?: boolean;
   grade?: string;

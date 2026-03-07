@@ -26,13 +26,16 @@ router.delete("/quizzes/:quizId", adminController.deleteQuiz);
 router.post("/quizzes/:quizId/assign", validate(adminValidation.assignQuizSchema), adminController.assignQuiz);
 router.get("/quizzes/:quizId/results", adminController.getQuizResults);
 router.get("/results", adminController.getAllResults);
+router.get("/results/:attemptId", adminController.getAdminAttemptResult);
 
 router.get("/students", adminController.getStudents);
+router.patch("/students/:userId", adminController.updateStudent);
 router.patch("/students/:userId/toggle-status", adminController.toggleStudentStatus);
 router.delete("/students/:userId", adminController.deleteStudent);
 router.post("/students/import", upload.single("file"), adminController.importStudents);
 
 router.get("/teachers", adminController.getTeachers);
+router.patch("/teachers/:userId", adminController.updateTeacher);
 router.patch("/teachers/:userId/toggle-status", adminController.toggleTeacherStatus);
 router.delete("/teachers/:userId", adminController.deleteTeacher);
 

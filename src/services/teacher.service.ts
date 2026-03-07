@@ -218,6 +218,38 @@ export const getTeacherResults = async (
   };
 };
 
+export const updateStudentInClass = async (
+  teacherUserId: string,
+  studentUserId: string,
+  data: { firstName?: string; lastName?: string; email?: string; username?: string }
+) => {
+  const teacher = await User.findOne({ userId: teacherUserId, isDeleted: { $ne: true } });
+  if (!teacher) throw new AppError("Teacher not found", 404);
+
+  const assignedClass = await Class.findOne({ teacher: teacher._id, isDeleted: { $ne: true } });
+  const student = await User.findOne({ userId: studentUserId, role: UserRole.STUDENT, isDeleted: { $ne: true } });
+  if (!student) throw new AppError("Student not found", 404);
+  if (!assignedClass || !assignedClass.students.map((s) => s.toString()).includes(student._id.toString())) {
+    throw new AppError("Student is not in your class", 403);
+  }
+
+  if (data.email && data.email !== student.email) {
+    const exists = await User.findOne({ email: data.email, _id: { $ne: student._id } });
+    if (exists) throw new AppError("Email already in use", 409);
+  }
+  if (data.username && data.username !== student.username) {
+    const exists = await User.findOne({ username: data.username, _id: { $ne: student._id } });
+    if (exists) throw new AppError("Username already in use", 409);
+  }
+
+  if (data.firstName) student.firstName = data.firstName;
+  if (data.lastName) student.lastName = data.lastName;
+  if (data.email) student.email = data.email;
+  if (data.username) student.username = data.username;
+  await student.save();
+  return student;
+};
+
 export const getAttemptResult = async (
   userId: string,
   attemptId: string

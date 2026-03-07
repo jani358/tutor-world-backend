@@ -24,6 +24,7 @@ router.post("/quizzes/:quizId/assign", validate(adminValidation.assignQuizSchema
 router.get("/quizzes/:quizId/results", teacherController.getQuizResults);
 
 router.get("/students", teacherController.getStudents);
+router.patch("/students/:userId", teacherController.updateStudent);
 
 router.get("/results", teacherController.getResults);
 router.get("/results/:attemptId", teacherController.getAttemptResult);

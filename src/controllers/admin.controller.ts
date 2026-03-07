@@ -167,6 +167,30 @@ export const getAllResults = asyncHandler(
   }
 );
 
+export const updateStudent = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { userId } = req.params;
+    const student = await adminService.updateStudent(userId, req.body);
+    res.status(200).json({ status: "success", message: "Student updated successfully", data: student });
+  }
+);
+
+export const updateTeacher = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { userId } = req.params;
+    const teacher = await adminService.updateTeacher(userId, req.body);
+    res.status(200).json({ status: "success", message: "Teacher updated successfully", data: teacher });
+  }
+);
+
+export const getAdminAttemptResult = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { attemptId } = req.params;
+    const result = await adminService.getAdminAttemptResult(attemptId);
+    res.status(200).json({ status: "success", data: result });
+  }
+);
+
 export const getStudents = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const filters = {
