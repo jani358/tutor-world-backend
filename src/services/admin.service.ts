@@ -1024,6 +1024,20 @@ export const assignTeacherToClass = async (
   const classDoc = await Class.findOne({ classId, isDeleted: { $ne: true } });
   if (!classDoc) throw new AppError("Class not found", 404);
 
+  // Empty teacherId = unassign
+  if (!teacherId) {
+    const prevTeacher = classDoc.teacher
+      ? await User.findById(classDoc.teacher)
+      : null;
+    classDoc.teacher = undefined;
+    await classDoc.save();
+    if (actorUserId) {
+      const actor = await User.findOne({ userId: actorUserId });
+      if (actor) logAudit({ action: "UPDATED", targetType: "Class", targetId: classDoc.classId, targetLabel: classDoc.name, changedBy: actor._id, changes: [{ field: "teacher", oldValue: prevTeacher ? `${prevTeacher.firstName} ${prevTeacher.lastName}` : "Unassigned", newValue: "Unassigned" }] });
+    }
+    return { message: "Teacher unassigned successfully" };
+  }
+
   const teacher = await User.findOne({
     userId: teacherId,
     role: UserRole.TEACHER,
