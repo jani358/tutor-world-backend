@@ -2,7 +2,7 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import * as authController from "../controllers/auth.controller";
 import { validate } from "../middlewares/validation.middleware";
-import { authenticate, isAdmin } from "../middlewares/auth.middleware";
+import { authenticate, isAdmin, isAdminOrTeacher } from "../middlewares/auth.middleware";
 import * as authValidation from "../validations/auth.validation";
 import { upload } from "../middlewares/upload.middleware";
 
@@ -121,7 +121,7 @@ router.post(
 router.post(
   "/create-student",
   authenticate,
-  isAdmin,
+  isAdminOrTeacher,
   validate(authValidation.createStudentSchema),
   authController.createStudent
 );
